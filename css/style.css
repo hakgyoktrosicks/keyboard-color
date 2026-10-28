@@ -408,3 +408,64 @@ input[type='color']:disabled {
   margin: 4px 0 0;
   padding-left: 1.25em;
 }
+
+.changelog {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.changelog h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.changelog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.changelog-list > li {
+  display: grid;
+  grid-template-columns: 6.5em 1fr;
+  column-gap: 12px;
+}
+
+.changelog-list time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.changelog-list ul {
+  grid-column: 2;
+  margin: 2px 0 0;
+  padding-left: 1.25em;
+  color: var(--muted);
+}
+
+.changelog details {
+  margin-top: 10px;
+}
+
+.changelog details > .changelog-list {
+  margin-top: 10px;
+}
+
+.changelog summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+@media (max-width: 480px) {
+  .changelog-list > li {
+    grid-template-columns: 1fr;
+  }
+
+  .changelog-list ul {
+    grid-column: 1;
+  }
+}
