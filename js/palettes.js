@@ -13,7 +13,7 @@
       id: 'nord',
       name: 'Nord',
       desc: '北極圏をイメージした寒色系のUIパレット。',
-      credit: { name: 'Nord', copyright: 'Copyright (c) 2016-present Sven Greb (Arctic Ice Studio)', license: 'MIT', url: 'https://github.com/nordtheme/nord' },
+      credit: { name: 'Nord', copyright: 'Copyright (c) 2016-present Sven Greb', license: 'MIT', url: 'https://github.com/nordtheme/nord' },
       colors: { case: '#3b4252', alpha: '#eceff4', mod: '#4c566a', accent: '#88c0d0' },
     },
     {
@@ -34,7 +34,7 @@
       id: 'dracula',
       name: 'Dracula',
       desc: '暗い紫灰にネオンピンクを効かせたダークテーマ。',
-      credit: { name: 'Dracula', copyright: 'Copyright (c) Dracula Theme', license: 'MIT', url: 'https://github.com/dracula/dracula-theme' },
+      credit: { name: 'Dracula', copyright: 'Copyright (c) 2023 Dracula Theme', license: 'MIT', url: 'https://github.com/dracula/dracula-theme' },
       colors: { case: '#282a36', alpha: '#44475a', mod: '#6272a4', accent: '#ff79c6' },
     },
     {
