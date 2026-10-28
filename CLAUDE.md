@@ -34,42 +34,44 @@
 2. **非公式表記を維持する**: フッターと README の「クレジット・表記について」を削除しない。
 3. **他者のパレットを使う場合はライセンスを確認する**: ライセンスを確認してから採用し、`js/palettes.js` のプリセットに `credit`（name / copyright / license / url）を付ける。フッターのクレジットは `credit` から自動生成される。README のクレジット欄にも同じ著作権表示を書く。
 4. **ライセンスが不明・非許諾のものは使わない**: 確認できないパレットは色を流用せず、汎用的な名前の独自配色にする（例: 市販キーキャップセットの配色名は使わない）。
-5. **新しい固有名を加えたら下の台帳に記録する**: 確認状況は「確認済（一次）」「確認済（二次情報）」「未確認」「未調査」で書き、推測で埋めない。
+5. **新しい固有名を加えたら下の台帳に記録する**: 確認状況は「確認済（一次）」「確認済（二次情報）」「未確認」「未調査」で書き、推測で埋めない。`credit` の著作権表示はライセンスファイルの記載をそのまま写す（推測で補わない）。
 
 `tests/rights.test.js` が次を検証する: 全レイアウトの `example` と全プリセットの `id` が台帳にあること、`credit` の著作権表示が README にあること、レイアウトの表示名に `example` の固有名が入っていないこと。
 
 ## 名称・権利台帳
 
+確認状況の「一次」は、権利者自身のリポジトリのライセンスファイルや README を直接読んで確かめたもの。最終確認: 2026-10-29（JST）。
+
 ### レイアウトの参照名（`example`）
 
 | 参照名 | 対象 | 権利・ライセンス | 確認状況 | 出典 |
 | --- | --- | --- | --- | --- |
-| HHKB系 | PFU の Happy Hacking Keyboard の配列系統 | 商標の登録状況は未確認 | 未調査 | — |
-| 1800系 | コミュニティでの配列の通称 | 特定の権利者は確認できていない | 未調査 | — |
-| Alice系 | TGR Alice に由来する配列の通称 | — | 未調査 | — |
-| Ferris Sweep系 | オープンソースの分割キーボード | — | 未調査 | — |
-| Corne（crkbd） | foostan のオープンソース分割キーボード | MIT, Copyright (c) 2018 foostan | 確認済（二次情報） | [splitkb attribution](https://docs.splitkb.com/hc/en-us/articles/360011125859-Lily58-KB-License) |
-| Lily58 | Naoki Katahira のオープンソース分割キーボード | MIT, Copyright (c) 2018 Naoki Katahira | 確認済（二次情報） | [Deskthority](https://deskthority.net/wiki/Lily58), [splitkb](https://docs.splitkb.com/hc/en-us/articles/360011125859-Lily58-KB-License) |
-| Sofle | オープンソースの分割キーボード | — | 未調査 | — |
-| Planck | OLKB が販売する 4×12 キーボード | ハードウェアのライセンスは見つからず（ファームウェアの QMK は GPL-2.0） | 未確認 | [QMK keyboards/planck](https://github.com/qmk/qmk_firmware/tree/master/keyboards/planck) |
-| Preonic | OLKB が販売する 5×12 キーボード | — | 未調査 | — |
-| Let's Split系 | Wootpatoot 設計の 4×6×2 分割オーソリニア（Keebio Levinson も同系統） | ライセンスは見つからず | 未確認 | [1upkeyboards](https://1upkeyboards.com/shop/keyboard-kits/diy-40-kits/lets-split-v3/), [QMK levinson readme](https://git.rekahsoft.ca/rekahsoft/qmk-firmware/blame/branch/master/keyboards/keebio/levinson/readme.md) |
-| Nyquist系 | Keebio の 5×6×2 分割オーソリニア（既存知識のみ。検索で裏付けなし） | — | 未調査 | — |
+| HHKB系 | PFU の Happy Hacking Keyboard の配列系統 | 「Happy Hacking」「HHK」「HHKB」等は株式会社PFUの日本における登録商標（PFU のプレスリリースの記載）。参照的な使用にとどめる | 確認済（二次情報：プレスリリースの転載で確認。PFU 公式サイトはこの環境から接続不可） | [PFUプレスリリース転載（琉球新報）](https://ryukyushimpo.jp/prtimes/entry-5207389.html) |
+| 1800系 | Cherry G80-1800 に似た配列・形状を指すコミュニティの通称 | 製品の型番に由来する通称。特定の権利主張は見つからず | 確認済（二次情報） | [Deskthority: 1800](https://deskthority.net/wiki/1800) |
+| Alice系 | TGR Alice（Yuk Tsi 設計、2018年）に由来する配列の通称。派生の Arisu は MIT とされる | TGR Alice の設計ファイルのライセンスは見つからず | 確認済（二次情報） | [Deskthority: Alice layout](https://deskthority.net/wiki/Alice_layout) |
+| Ferris Sweep系 | David Barr（davidphilipbarr）設計の 34 キー分割 | ハードウェア: Solderpad Hardware License v2.1 | 確認済（一次） | [davidphilipbarr/Sweep](https://github.com/davidphilipbarr/Sweep) |
+| Corne（crkbd） | foostan のオープンソース分割キーボード | MIT, Copyright (c) 2023 foostan（`LICENSE_MIT`）と CC BY 4.0（`LICENSE_CC`）の2ファイル。どちらが何に適用されるかは README に記載なし | 確認済（一次） | [foostan/crkbd](https://github.com/foostan/crkbd) |
+| Lily58 | Naoki Katahira のオープンソース分割キーボード | MIT, Copyright (c) 2018 Naoki Katahira | 確認済（一次） | [kata0510/Lily58](https://github.com/kata0510/Lily58) |
+| Sofle | Josef Adamcik のオープンソース分割キーボード | MIT, Copyright (c) 2019 Josef Adamcik | 確認済（一次） | [josefadamcik/SofleKeyboard](https://github.com/josefadamcik/SofleKeyboard) |
+| Planck | OLKB が販売する 4×12 キーボード | OLKB の設計ファイル（`planck/`）は CC BY-SA 4.0。出典を明記すれば共同購入も可と記載 | 確認済（一次） | [olkb/olkb_parts](https://github.com/olkb/olkb_parts), [QMK readme](https://github.com/qmk/qmk_firmware/tree/master/keyboards/planck) |
+| Preonic | OLKB が販売する 5×12 キーボード | OLKB の設計ファイル（`preonic/`）は CC BY-SA 4.0 | 確認済（一次） | [olkb/olkb_parts](https://github.com/olkb/olkb_parts), [QMK readme](https://github.com/qmk/qmk_firmware/tree/master/keyboards/preonic) |
+| Let's Split系 | Wootpatoot 設計の 4×6×2 分割オーソリニア（Keebio Levinson も同系統） | 原設計のライセンスは見つからず（QMK は設計ファイルの置き場を qmk.fm と案内）。QMK が案内するソケット版フォークは MIT, Copyright (c) 2017 Max Hernandez。原設計者との関係は未確認 | 未確認 | [QMK readme](https://github.com/qmk/qmk_firmware/tree/master/keyboards/lets_split), [dumle29/let-s-Split-v2](https://github.com/dumle29/let-s-Split-v2) |
+| Nyquist系 | Keebio が製造・販売する 5×12 分割オーソリニア | Keebio の市販品。公開された設計ファイル・ライセンスは見つからず | 確認済（一次：QMK の readme で製品情報を確認） | [QMK readme](https://github.com/qmk/qmk_firmware/tree/master/keyboards/keebio/nyquist) |
 
 ### 研究・データの参照
 
 | 参照名 | 対象 | 権利・ライセンス | 確認状況 | 出典 |
 | --- | --- | --- | --- | --- |
-| Machado 2009 | 色覚シミュレーションの変換行列（重症度1.0の1型・2型・3型） | 論文の数値。照合に使った colour-science のデータセットは BSD-3-Clause | 確認済（二次情報：colour-science 0.4.6 のデータセットで数値を照合） | [colour-science](https://github.com/colour-science/colour) |
+| Machado 2009 | 色覚シミュレーションの変換行列（重症度1.0の1型・2型・3型） | 論文の数値。照合に使った colour-science のデータセットは BSD-3-Clause | 確認済（二次情報：colour-science 0.4.6 のデータセットで数値を照合。論文のサイトはこの環境から接続不可） | [colour-science](https://github.com/colour-science/colour) |
 
 ### プリセット（`id`）
 
 | id | 由来 | 権利・ライセンス | 確認状況 | 出典 |
 | --- | --- | --- | --- | --- |
-| `nord` | Nord パレット | MIT, Copyright (c) 2016-present Sven Greb (Arctic Ice Studio) | 確認済（二次情報） | [nordtheme/nord](https://github.com/nordtheme/nord) |
-| `solarized-light` | Solarized | MIT, Copyright (c) 2011 Ethan Schoonover | 確認済（二次情報） | [Wikipedia](https://en.wikipedia.org/wiki/Solarized), [altercation/solarized](https://github.com/altercation/solarized) |
-| `solarized-dark` | Solarized | 同上 | 確認済（二次情報） | 同上 |
-| `dracula` | Dracula テーマ | MIT（著作権者表記は要確認） | 未確認 | [dracula/dracula-theme](https://github.com/dracula/dracula-theme) |
+| `nord` | Nord パレット | MIT, Copyright (c) 2016-present Sven Greb | 確認済（一次） | [nordtheme/nord](https://github.com/nordtheme/nord) |
+| `solarized-light` | Solarized | MIT, Copyright (c) 2011 Ethan Schoonover | 確認済（一次） | [altercation/solarized](https://github.com/altercation/solarized) |
+| `solarized-dark` | Solarized | 同上 | 確認済（一次） | 同上 |
+| `dracula` | Dracula テーマ | MIT, Copyright (c) 2023 Dracula Theme | 確認済（一次） | [dracula/dracula-theme](https://github.com/dracula/dracula-theme) |
 | `retro` | 独自配色（一般的な「ベージュ筐体」のイメージ） | 該当なし | — | — |
 | `wa` | 独自配色（日本の伝統色名を参照） | 該当なし | — | — |
 | `bauhaus` | 独自配色（美術様式を参照） | 該当なし | — | — |

@@ -62,8 +62,8 @@ Node.js 18以降の組み込みテストランナーで、色計算、レイア�
 
 プリセットの一部は以下の配色を参考にしています。
 
-- [Nord](https://github.com/nordtheme/nord) — Copyright (c) 2016-present Sven Greb (Arctic Ice Studio), MIT License
+- [Nord](https://github.com/nordtheme/nord) — Copyright (c) 2016-present Sven Greb, MIT License
 - [Solarized](https://github.com/altercation/solarized) — Copyright (c) 2011 Ethan Schoonover, MIT License
-- [Dracula](https://github.com/dracula/dracula-theme) — Copyright (c) Dracula Theme, MIT License
+- [Dracula](https://github.com/dracula/dracula-theme) — Copyright (c) 2023 Dracula Theme, MIT License
 
 色覚シミュレーションは、Machado, Oliveira & Fernandes, "A Physiologically-based Model for Simulation of Color Vision Deficiency" (IEEE TVCG, 2009) の重症度1.0の行列を使い、線形RGBに適用しています。数値は [colour-science](https://github.com/colour-science/colour)（BSD-3-Clause）のデータセット `CVD_MATRICES_MACHADO2010` で確認しました。
