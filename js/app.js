@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const { color, layouts, presets, renderKeyboard } = window.KC;
+  const { color, layouts, presets, changelog, renderKeyboard } = window.KC;
 
   const GROUPS = ['alpha', 'mod', 'accent'];
   const GROUP_LABELS = { alpha: 'アルファ', mod: 'モディファイア', accent: 'アクセント' };
@@ -242,6 +242,21 @@
       .join('');
   }
 
+  const CHANGELOG_VISIBLE = 3;
+
+  function renderChangelog() {
+    const entry = (e) =>
+      `<li><time datetime="${e.date}">${e.date}</time><strong>${e.title}</strong>` +
+      `<ul>${e.items.map((item) => `<li>${item}</li>`).join('')}</ul></li>`;
+    const recent = changelog.slice(0, CHANGELOG_VISIBLE);
+    const older = changelog.slice(CHANGELOG_VISIBLE);
+    $('changelog').innerHTML =
+      `<ol class="changelog-list">${recent.map(entry).join('')}</ol>` +
+      (older.length
+        ? `<details><summary>以前の更新（${older.length}件）</summary><ol class="changelog-list">${older.map(entry).join('')}</ol></details>`
+        : '');
+  }
+
   // ---------- events ----------
 
   function bind() {
@@ -342,6 +357,7 @@
       .join('');
     $('paint').value = state.paint;
     renderCredits();
+    renderChangelog();
 
     bind();
     if (loadHash()) renderAll();
