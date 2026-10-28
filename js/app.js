@@ -1,12 +1,13 @@
 (function () {
   'use strict';
-  const { color, layouts, presets, changelog, renderKeyboard } = window.KC;
+  const { color, layouts, presets, changelog, bom, renderKeyboard } = window.KC;
 
   const GROUPS = ['alpha', 'mod', 'accent'];
   const GROUP_LABELS = { alpha: 'アルファ', mod: 'モディファイア', accent: 'アクセント' };
 
   const state = {
     layoutId: '65',
+    std: 'ansi', // preferred key standard for layouts that have a JIS variant
     source: 'harmony',
     base: '#5e81ac',
     harmony: 'complementary',
@@ -50,6 +51,27 @@
   function renderPreview() {
     $('preview').innerHTML = currentSvg();
     $('preview').classList.toggle('painting', state.paintMode);
+    renderBom();
+  }
+
+  function currentBom() {
+    return bom.computeBom(layouts.byId[state.layoutId].keys, colorsFor);
+  }
+
+  function renderBom() {
+    $('bom').innerHTML = currentBom()
+      .map(
+        (g) =>
+          `<li><span class="bom-swatch" style="background:${g.cap};color:${g.legend}">A</span>` +
+          `<span class="bom-color"><code>${g.cap}</code><small>刻印 ${g.legend}</small></span>` +
+          `<span class="bom-total">${g.total}個</span>` +
+          `<span class="bom-sizes">${g.sizes.map((s) => `${s.size}×${s.count}`).join(' / ')}</span></li>`
+      )
+      .join('');
+  }
+
+  function layoutTitle(layout) {
+    return layout.std === 'jis' ? `${layout.name}（JIS）` : layout.name;
   }
 
   function renderRatio() {
@@ -69,10 +91,10 @@
       (cat) =>
         `<h3 class="layout-cat">${cat.name}</h3><div class="layout-grid">` +
         layouts.list
-          .filter((l) => l.cat === cat.id)
+          .filter((l) => l.cat === cat.id && !l.variantOf)
           .map(
             (l) =>
-              `<button type="button" class="layout-btn" data-id="${l.id}" aria-pressed="${l.id === state.layoutId}">` +
+              `<button type="button" class="layout-btn" data-id="${l.id}" aria-pressed="${l.id === baseLayout().id}">` +
               `<span class="layout-name">${l.name}${l.example ? `<small>例: ${l.example}</small>` : ''}</span>` +
               `${l.tag ? `<small class="layout-tag">${l.tag}</small>` : ''}</button>`
           )
@@ -80,6 +102,24 @@
         `</div>`
     ).join('');
     $('layout-desc').textContent = layouts.byId[state.layoutId].desc;
+    const hasJis = Boolean(baseLayout().jis);
+    const std = layouts.byId[state.layoutId].std || 'ansi';
+    for (const btn of $('std-toggle').querySelectorAll('button')) {
+      btn.disabled = !hasJis;
+      btn.setAttribute('aria-pressed', btn.dataset.std === std);
+    }
+    $('std-note').hidden = hasJis;
+  }
+
+  function baseLayout() {
+    const layout = layouts.byId[state.layoutId];
+    return layout.variantOf ? layouts.byId[layout.variantOf] : layout;
+  }
+
+  // Pick the variant of a base layout that matches the preferred key standard.
+  function selectLayout(baseId) {
+    const base = layouts.byId[baseId];
+    state.layoutId = state.std === 'jis' && base.jis ? base.jis : baseId;
   }
 
   function renderSource() {
@@ -92,6 +132,7 @@
     $('harmony').value = state.harmony;
     $('tone').value = state.tone;
     $('harmony-desc').textContent = color.HARMONIES[state.harmony].desc;
+    $('source-note').hidden = state.source !== 'custom';
     for (const btn of $('presets').querySelectorAll('.preset')) {
       btn.setAttribute('aria-pressed', state.source === 'preset' && btn.dataset.id === state.presetId);
     }
@@ -160,7 +201,13 @@
   // ---------- share / export ----------
 
   function encodeState() {
-    const data = { l: state.layoutId, c: state.colors, a: state.autoLegend, o: layoutOverrides() };
+    const data = {
+      l: state.layoutId,
+      c: state.colors,
+      a: state.autoLegend,
+      o: layoutOverrides(),
+      s: { src: state.source, b: state.base, h: state.harmony, t: state.tone, p: state.presetId },
+    };
     return btoa(JSON.stringify(data));
   }
 
@@ -180,13 +227,36 @@
       const overrides = {};
       for (const [id, hex] of Object.entries(data.o || {})) if (color.isHex(hex)) overrides[id] = hex;
       state.layoutId = layoutId;
+      state.std = layouts.byId[layoutId].std || 'ansi';
       state.colors = data.c;
       state.autoLegend = data.a !== false;
       state.overrides[layoutId] = overrides;
-      state.source = 'custom';
+      restoreSource(data.s);
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // Restore the palette-source controls saved in a share URL. URLs made before these
+  // were saved (or with invalid values) fall back to 'custom'.
+  function restoreSource(s) {
+    state.source = 'custom';
+    if (!s) return;
+    if (color.isHex(s.b)) state.base = s.b;
+    if (color.HARMONIES[s.h]) state.harmony = s.h;
+    if (color.TONES[s.t]) state.tone = s.t;
+    if (presets.some((p) => p.id === s.p)) state.presetId = s.p;
+    if (s.src === 'harmony' || (s.src === 'preset' && state.presetId === s.p)) state.source = s.src;
+  }
+
+  async function copyBom() {
+    const text = bom.bomText(currentBom(), `${layoutTitle(layouts.byId[state.layoutId])} のキーキャップ内訳`);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('キーキャップ内訳をコピーしました');
+    } catch {
+      window.prompt('この内容をコピーしてください', text);
     }
   }
 
@@ -263,9 +333,19 @@
     $('layouts').addEventListener('click', (e) => {
       const btn = e.target.closest('.layout-btn');
       if (!btn) return;
-      state.layoutId = btn.dataset.id;
+      selectLayout(btn.dataset.id);
       renderAll();
     });
+
+    $('std-toggle').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-std]');
+      if (!btn || btn.disabled) return;
+      state.std = btn.dataset.std;
+      selectLayout(baseLayout().id);
+      renderAll();
+    });
+
+    $('btn-bom-copy').addEventListener('click', copyBom);
 
     $('tab-harmony').addEventListener('click', generate);
     $('tab-preset').addEventListener('click', () => usePreset(state.presetId || presets[0].id));

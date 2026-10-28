@@ -1,13 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { list, byId, CATEGORIES, corners, resolveId } = require('../js/layouts.js');
+const { list, byId, CATEGORIES, corners, rects, resolveId } = require('../js/layouts.js');
 const presets = require('../js/palettes.js');
 const { isHex } = require('../js/color.js');
 
 const EPS = 1e-6;
 
 // Separating axis test for two convex quads (rotated rectangles).
-function overlaps(a, b) {
+function rectsOverlap(a, b) {
   const pa = corners(a);
   const pb = corners(b);
   for (const poly of [pa, pb]) {
@@ -23,6 +23,11 @@ function overlaps(a, b) {
     }
   }
   return true;
+}
+
+// Keys may be made of several rectangles (the L-shaped Enter).
+function overlaps(a, b) {
+  return rects(a).some((ra) => rects(b).some((rb) => rectsOverlap(ra, rb)));
 }
 
 test('overlap check detects overlapping and rotated keys', () => {
@@ -62,6 +67,13 @@ test('layouts have the expected width and key count', () => {
     ortho5x12: [12, 59],
     splitortho4x6: [13, 48],
     splitortho5x6: [13, 60],
+    // JIS: 15-key number row (1u BS), L-shaped Enter, ろ key, 無変換/変換/かな.
+    '60-jis': [15, 64],
+    '65-jis': [16, 71],
+    '75-jis': [16, 87],
+    'tkl-jis': [18.25, 90],
+    '96-jis': [19, 103],
+    '100-jis': [22.5, 107],
   };
   assert.deepEqual(Object.keys(expected).sort(), list.map((l) => l.id).sort());
   for (const [id, [width, count]] of Object.entries(expected)) {
@@ -71,10 +83,28 @@ test('layouts have the expected width and key count', () => {
 });
 
 test('row-staggered layouts have rows of equal width', () => {
-  for (const id of ['40', '60', '60wkl', '65']) {
+  for (const id of ['40', '60', '60wkl', '65', '60-jis', '65-jis']) {
     const rows = new Map();
-    for (const key of byId[id].keys) if (key.h === 1) rows.set(key.y, Math.max(rows.get(key.y) || 0, key.x + key.w));
+    for (const r of byId[id].keys.flatMap(rects)) if (r.h === 1) rows.set(r.y, Math.max(rows.get(r.y) || 0, r.x + r.w));
     for (const [y, end] of rows) assert.equal(end, byId[id].width, `${id} row y=${y}`);
+  }
+});
+
+test('L-shaped Enter fits between its neighbours', () => {
+  const keys = byId['60-jis'].keys;
+  const enter = keys.find((k) => k.shape === 'iso');
+  assert.deepEqual(rects(enter).map((r) => [r.x, r.y, r.w, r.h]), [[13.5, 1, 1.5, 1], [13.75, 2, 1.25, 1]]);
+  const rightBracket = keys.find((k) => k.l === ']' && k.y === 2);
+  assert.equal(rightBracket.x + rightBracket.w, 13.75);
+});
+
+test('JIS variants link back to their base layout', () => {
+  const variants = list.filter((l) => l.variantOf);
+  assert.equal(variants.length, 6);
+  for (const v of variants) {
+    assert.equal(v.std, 'jis');
+    assert.equal(byId[v.variantOf].jis, v.id);
+    assert.equal(v.cat, byId[v.variantOf].cat);
   }
 });
 

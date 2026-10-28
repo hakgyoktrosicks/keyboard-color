@@ -34,6 +34,24 @@
     return 11;
   }
 
+  // L-shaped Enter. A stroke of the fill color with round joins rounds the corners,
+  // so every edge is pulled in by `rad` first. `inset` is { l, t, r, b } in px.
+  function lShape(x, y, w, h, notch, inset, rad, fill) {
+    const { l, t, r, b } = inset;
+    const pts = [
+      [x + l + rad, y + t + rad],
+      [x + w - r - rad, y + t + rad],
+      [x + w - r - rad, y + h - b - rad],
+      [x + notch + l + rad, y + h - b - rad],
+      [x + notch + l + rad, y + U - b - rad],
+      [x + l + rad, y + U - b - rad],
+    ];
+    return (
+      `<polygon points="${pts.map((p) => p.map((v) => +v.toFixed(2)).join(',')).join(' ')}" ` +
+      `fill="${fill}" stroke="${fill}" stroke-width="${rad * 2}" stroke-linejoin="round"/>`
+    );
+  }
+
   // colorsFor(key) -> { cap, legend }
   function renderKeyboard(layout, caseColor, colorsFor) {
     const width = (layout.width + PAD * 2) * U;
@@ -58,11 +76,17 @@
       const w = key.w * U;
       const h = key.h * U;
       const transform = key.rot ? ` transform="rotate(${key.rot} ${px(key.rx)} ${px(key.ry)})"` : '';
+      const iso = key.shape === 'iso';
+      const body = iso
+        ? lShape(x, y, w, h, 0.25 * U, { l: 2, t: 2, r: 2, b: 2 }, 5, shade(cap, -14)) +
+          lShape(x, y, w, h, 0.25 * U, { l: 7, t: 4, r: 7, b: 11 }, 4, cap)
+        : `<rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="7" fill="${shade(cap, -14)}"/>` +
+          `<rect x="${x + 7}" y="${y + 4}" width="${w - 14}" height="${h - 15}" rx="5" fill="${cap}"/>`;
+      const legendY = y + ((iso ? U : h) - 11) / 2 + 4;
       parts.push(
         `<g class="key" data-id="${key.id}"${transform}>` +
-          `<rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="7" fill="${shade(cap, -14)}"/>` +
-          `<rect x="${x + 7}" y="${y + 4}" width="${w - 14}" height="${h - 15}" rx="5" fill="${cap}"/>` +
-          `<text x="${x + w / 2}" y="${y + (h - 11) / 2 + 4}" fill="${legend}" font-size="${fontSize(key.l)}" ` +
+          body +
+          `<text x="${x + w / 2}" y="${legendY}" fill="${legend}" font-size="${fontSize(key.l)}" ` +
           `font-family="${esc(FONT)}" font-weight="600" text-anchor="middle" dominant-baseline="middle">${esc(key.l)}</text>` +
           `</g>`
       );
