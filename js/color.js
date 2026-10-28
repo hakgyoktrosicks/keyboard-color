@@ -73,14 +73,21 @@
   const hexToHsl = (hex) => rgbToHsl(hexToRgb(hex));
   const hslToHex = (hsl) => rgbToHex(hslToRgb(hsl));
 
+  // sRGB <-> linear-light channel values (0-1).
+  function toLinear(c) {
+    c /= 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+
+  function fromLinear(v) {
+    v = clamp(v, 0, 1);
+    return 255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055);
+  }
+
   // WCAG 2.x relative luminance.
   function luminance(hex) {
     const { r, g, b } = hexToRgb(hex);
-    const lin = (c) => {
-      c /= 255;
-      return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    };
-    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
   }
 
   function contrastRatio(a, b) {
@@ -151,6 +158,50 @@
     dark: { label: 'ダーク', case: [0.15, 10], alpha: [0.3, 22], mod: [0.3, 34], accent: [0.95, 62] },
   };
 
+  // Colour vision deficiency simulation. Dichromat matrices (severity 1.0) from
+  // Machado, Oliveira & Fernandes (2009), as published in the colour-science dataset
+  // CVD_MATRICES_MACHADO2010; applied to linear-light RGB.
+  const CVD = {
+    protanopia: {
+      label: '1型2色覚（P型）',
+      matrix: [
+        [0.152286, 1.052583, -0.204868],
+        [0.114503, 0.786281, 0.099216],
+        [-0.003882, -0.048116, 1.051998],
+      ],
+    },
+    deuteranopia: {
+      label: '2型2色覚（D型）',
+      matrix: [
+        [0.367322, 0.860646, -0.227968],
+        [0.280085, 0.672501, 0.047413],
+        [-0.01182, 0.04294, 0.968881],
+      ],
+    },
+    tritanopia: {
+      label: '3型2色覚（T型）',
+      matrix: [
+        [1.255528, -0.076749, -0.178779],
+        [-0.078411, 0.930809, 0.147602],
+        [0.004733, 0.691367, 0.3039],
+      ],
+    },
+    achromatopsia: { label: '1色覚（明暗のみ）', matrix: null },
+  };
+
+  function simulateCvd(hex, type) {
+    const cvd = CVD[type];
+    if (!cvd) return hex;
+    const { r, g, b } = hexToRgb(hex);
+    const lin = [toLinear(r), toLinear(g), toLinear(b)];
+    if (!cvd.matrix) {
+      const y = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+      return rgbToHex({ r: fromLinear(y), g: fromLinear(y), b: fromLinear(y) });
+    }
+    const [mr, mg, mb] = cvd.matrix.map((row) => row[0] * lin[0] + row[1] * lin[1] + row[2] * lin[2]);
+    return rgbToHex({ r: fromLinear(mr), g: fromLinear(mg), b: fromLinear(mb) });
+  }
+
   const ROLES = ['case', 'alpha', 'mod', 'accent'];
 
   function generatePalette(base, harmonyKey, toneKey) {
@@ -186,5 +237,7 @@
     HARMONIES,
     TONES,
     generatePalette,
+    CVD,
+    simulateCvd,
   };
 });

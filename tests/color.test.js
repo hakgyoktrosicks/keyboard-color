@@ -48,3 +48,34 @@ test('every harmony x tone combination yields valid colors', () => {
     }
   }
 });
+
+test('colour vision simulation keeps neutrals and merges red/green for dichromats', () => {
+  for (const type of Object.keys(color.CVD)) {
+    for (const gray of ['#000000', '#ffffff', '#808080', '#3a3a3a']) {
+      const sim = color.hexToRgb(color.simulateCvd(gray, type));
+      const orig = color.hexToRgb(gray);
+      for (const ch of ['r', 'g', 'b']) assert.ok(Math.abs(sim[ch] - orig[ch]) <= 1, `${type} ${gray}`);
+    }
+  }
+  // Red and green are 120° apart in hue, but protanopes / deuteranopes see both as
+  // yellowish: the hues collapse together and only lightness still differs.
+  const hueGap = (a, b) => {
+    const d = Math.abs(color.hexToHsl(a).h - color.hexToHsl(b).h) % 360;
+    return Math.min(d, 360 - d);
+  };
+  const red = '#d03030';
+  const green = '#30a030';
+  assert.ok(hueGap(red, green) > 100);
+  for (const type of ['protanopia', 'deuteranopia']) {
+    const gap = hueGap(color.simulateCvd(red, type), color.simulateCvd(green, type));
+    assert.ok(gap < 10, `${type}: red/green hues should collapse (gap ${gap.toFixed(1)}°)`);
+  }
+  assert.equal(color.simulateCvd('#123456', 'unknown'), '#123456');
+});
+
+test('Machado 2009 dichromat matrices preserve white (rows sum to ~1)', () => {
+  for (const [type, { matrix }] of Object.entries(color.CVD)) {
+    if (!matrix) continue;
+    for (const row of matrix) assert.ok(Math.abs(row.reduce((a, b) => a + b, 0) - 1) < 1e-3, type);
+  }
+});

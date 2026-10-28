@@ -25,7 +25,10 @@ python3 -m http.server 8000
 - **プリセット**: Nord、Solarized、Dracula、和色、バウハウスなど、デザインでよく使われるパレット
 - **微調整**: ケース、キーキャップ、刻印の色を個別に変更し、WCAGコントラスト比をその場で表示
 - **刻印色の自動調整**: キーキャップ色に対して読みやすい刻印色を自動で選択
-- **個別ペイント**: キーをクリックして1キーずつ塗り分け
+- **個別ペイント**: キーをクリックして1キーずつ塗り分け（Tab で選んで Enter / Space でも可）
+- **元に戻す・やり直す**: ボタンまたは Ctrl+Z / Ctrl+Shift+Z（色ピッカーのドラッグは1手にまとめる）
+- **保存**: 配色をブラウザ内（localStorage）に最大30件保存。端末間では共有されない
+- **色覚シミュレーション**: 1型・2型・3型2色覚と1色覚の見え方をプレビュー（PNG とキーキャップ内訳は実際の色）
 - **キーキャップ内訳**: 配色に必要なキーキャップの個数を、色・サイズごとに表示（テキストでコピー可）
 - **更新履歴**: ページ下部に新しい順で表示
 - **共有・保存**: 配色をURLに埋め込んで共有、PNGで書き出し
@@ -39,6 +42,7 @@ python3 -m http.server 8000
 | `js/palettes.js` | プリセットパレット |
 | `js/changelog.js` | ページ下部に表示する更新履歴 |
 | `js/bom.js` | キーキャップ内訳（色・サイズごとの個数）の集計 |
+| `js/history.js` | 元に戻す・やり直すの履歴管理 |
 | `js/render.js` | SVG描画 |
 | `js/app.js` | UIと状態管理 |
 
@@ -61,3 +65,5 @@ Node.js 18以降の組み込みテストランナーで、色計算、レイア�
 - [Nord](https://github.com/nordtheme/nord) — Copyright (c) 2016-present Sven Greb (Arctic Ice Studio), MIT License
 - [Solarized](https://github.com/altercation/solarized) — Copyright (c) 2011 Ethan Schoonover, MIT License
 - [Dracula](https://github.com/dracula/dracula-theme) — Copyright (c) Dracula Theme, MIT License
+
+色覚シミュレーションは、Machado, Oliveira & Fernandes, "A Physiologically-based Model for Simulation of Color Vision Deficiency" (IEEE TVCG, 2009) の重症度1.0の行列を使い、線形RGBに適用しています。数値は [colour-science](https://github.com/colour-science/colour)（BSD-3-Clause）のデータセット `CVD_MATRICES_MACHADO2010` で確認しました。

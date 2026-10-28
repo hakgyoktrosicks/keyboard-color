@@ -1,6 +1,8 @@
 (function () {
   'use strict';
   const { color, layouts, presets, changelog, bom, renderKeyboard } = window.KC;
+  // Not destructured as `history`: that name is the browser's window.history (used for the URL hash).
+  const undoStack = window.KC.history.createHistory();
 
   const GROUPS = ['alpha', 'mod', 'accent'];
   const GROUP_LABELS = { alpha: 'アルファ', mod: 'モディファイア', accent: 'アクセント' };
@@ -18,7 +20,12 @@
     overrides: {}, // { [layoutId]: { [keyId]: capHex } }
     paintMode: false,
     paint: '#e4572e',
+    cvd: '', // colour vision simulation for the preview only ('' = off)
   };
+
+  // State that undo / redo and saved designs restore. View-only settings (paint mode,
+  // simulation) are left out on purpose.
+  const UNDOABLE = ['layoutId', 'std', 'source', 'base', 'harmony', 'tone', 'presetId', 'autoLegend', 'colors', 'overrides'];
 
   const $ = (id) => document.getElementById(id);
 
@@ -42,15 +49,27 @@
     return { cap: state.colors[key.g].cap, legend: legendFor(key.g) };
   }
 
+  // Actual colors: used for PNG export and the keycap breakdown.
   function currentSvg() {
     return renderKeyboard(layouts.byId[state.layoutId], state.colors.case, colorsFor);
+  }
+
+  // What the preview shows: colors passed through the selected vision simulation.
+  function previewSvg() {
+    const sim = (hex) => (state.cvd ? color.simulateCvd(hex, state.cvd) : hex);
+    const simColorsFor = (key) => {
+      const { cap, legend } = colorsFor(key);
+      return { cap: sim(cap), legend: sim(legend) };
+    };
+    return renderKeyboard(layouts.byId[state.layoutId], sim(state.colors.case), simColorsFor, { interactive: state.paintMode });
   }
 
   // ---------- rendering ----------
 
   function renderPreview() {
-    $('preview').innerHTML = currentSvg();
+    $('preview').innerHTML = previewSvg();
     $('preview').classList.toggle('painting', state.paintMode);
+    $('cvd-note').hidden = !state.cvd;
     renderBom();
   }
 
@@ -170,7 +189,40 @@
     renderTuning();
     renderPreview();
     renderRatio();
+    renderUndo();
     saveHash();
+  }
+
+  // ---------- undo / redo ----------
+
+  function snapshot() {
+    return JSON.parse(JSON.stringify(Object.fromEntries(UNDOABLE.map((k) => [k, state[k]]))));
+  }
+
+  // Record the state before a change. Changes of the same `kind` in quick succession
+  // (dragging a color picker) become one undo step.
+  function checkpoint(kind = null) {
+    undoStack.checkpoint(snapshot(), kind);
+    renderUndo();
+  }
+
+  function undo() {
+    const snap = undoStack.undo(snapshot());
+    if (!snap) return;
+    Object.assign(state, snap);
+    renderAll();
+  }
+
+  function redo() {
+    const snap = undoStack.redo(snapshot());
+    if (!snap) return;
+    Object.assign(state, snap);
+    renderAll();
+  }
+
+  function renderUndo() {
+    $('btn-undo').disabled = !undoStack.canUndo();
+    $('btn-redo').disabled = !undoStack.canRedo();
   }
 
   // ---------- palette sources ----------
@@ -200,15 +252,19 @@
 
   // ---------- share / export ----------
 
-  function encodeState() {
-    const data = {
+  // Compact form used by share URLs and saved designs.
+  function shareData() {
+    return {
       l: state.layoutId,
       c: state.colors,
       a: state.autoLegend,
       o: layoutOverrides(),
       s: { src: state.source, b: state.base, h: state.harmony, t: state.tone, p: state.presetId },
     };
-    return btoa(JSON.stringify(data));
+  }
+
+  function encodeState() {
+    return btoa(JSON.stringify(shareData()));
   }
 
   function saveHash() {
@@ -218,7 +274,15 @@
   function loadHash() {
     if (location.hash.length < 2) return false;
     try {
-      const data = JSON.parse(atob(location.hash.slice(1)));
+      return applyShared(JSON.parse(atob(location.hash.slice(1))));
+    } catch {
+      return false;
+    }
+  }
+
+  // Validate and apply shareData(). Returns false (leaving state untouched) when invalid.
+  function applyShared(data) {
+    try {
       const layoutId = layouts.resolveId(data.l);
       if (!layoutId || !color.isHex(data.c.case)) return false;
       for (const g of GROUPS) {
@@ -257,6 +321,98 @@
       toast('キーキャップ内訳をコピーしました');
     } catch {
       window.prompt('この内容をコピーしてください', text);
+    }
+  }
+
+  // ---------- saved designs (this browser only) ----------
+
+  const SAVE_KEY = 'keyboard-color:saved';
+  const SAVE_LIMIT = 30;
+
+  function readSaved() {
+    try {
+      const list = JSON.parse(localStorage.getItem(SAVE_KEY) || '[]');
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function writeSaved(list) {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(list));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function saveCurrent() {
+    const list = readSaved();
+    if (list.length >= SAVE_LIMIT) {
+      toast(`保存できるのは${SAVE_LIMIT}件までです。不要なものを削除してください`);
+      return;
+    }
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const stamp = `${now.getMonth() + 1}/${now.getDate()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    list.unshift({
+      id: `${now.getTime().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      name: `${layoutTitle(layouts.byId[state.layoutId])} ${stamp}`,
+      data: JSON.parse(JSON.stringify(shareData())),
+    });
+    if (writeSaved(list)) {
+      toast('この配色を保存しました');
+      renderSaved();
+    } else {
+      toast('このブラウザでは保存できませんでした（プライベートモードなど）');
+    }
+  }
+
+  function renderSaved() {
+    const list = readSaved();
+    $('saved').innerHTML = list.length
+      ? list
+          .map((item) => {
+            const c = item.data && item.data.c;
+            const swatches = c
+              ? [c.case, c.alpha && c.alpha.cap, c.mod && c.mod.cap, c.accent && c.accent.cap]
+                  .filter(color.isHex)
+                  .map((hex) => `<i style="background:${hex}"></i>`)
+                  .join('')
+              : '';
+            const name = String(item.name).replace(/[&<>"]/g, '');
+            return (
+              `<li data-id="${String(item.id).replace(/[^a-z0-9]/gi, '')}"><span class="swatches">${swatches}</span>` +
+              `<span class="saved-name">${name}</span>` +
+              `<button type="button" data-action="open">開く</button>` +
+              `<button type="button" data-action="delete" aria-label="${name} を削除">削除</button></li>`
+            );
+          })
+          .join('')
+      : '<li class="saved-empty">まだ保存した配色はありません。</li>';
+  }
+
+  function onSavedClick(e) {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const id = btn.closest('li').dataset.id;
+    const list = readSaved();
+    const item = list.find((x) => String(x.id).replace(/[^a-z0-9]/gi, '') === id);
+    if (!item) return;
+    if (btn.dataset.action === 'open') {
+      const before = snapshot();
+      if (applyShared(item.data)) {
+        undoStack.checkpoint(before);
+        renderAll();
+        toast(`「${item.name}」を開きました`);
+      } else {
+        toast('この保存データは読み込めませんでした');
+      }
+    } else {
+      writeSaved(list.filter((x) => x !== item));
+      renderSaved();
+      toast(`「${item.name}」を削除しました`);
     }
   }
 
@@ -333,6 +489,7 @@
     $('layouts').addEventListener('click', (e) => {
       const btn = e.target.closest('.layout-btn');
       if (!btn) return;
+      checkpoint();
       selectLayout(btn.dataset.id);
       renderAll();
     });
@@ -340,6 +497,7 @@
     $('std-toggle').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-std]');
       if (!btn || btn.disabled) return;
+      checkpoint();
       state.std = btn.dataset.std;
       selectLayout(baseLayout().id);
       renderAll();
@@ -347,36 +505,49 @@
 
     $('btn-bom-copy').addEventListener('click', copyBom);
 
-    $('tab-harmony').addEventListener('click', generate);
-    $('tab-preset').addEventListener('click', () => usePreset(state.presetId || presets[0].id));
+    $('tab-harmony').addEventListener('click', () => {
+      checkpoint();
+      generate();
+    });
+    $('tab-preset').addEventListener('click', () => {
+      checkpoint();
+      usePreset(state.presetId || presets[0].id);
+    });
 
     $('base').addEventListener('input', (e) => {
+      checkpoint('base');
       state.base = e.target.value;
       generate();
     });
     $('harmony').addEventListener('change', (e) => {
+      checkpoint();
       state.harmony = e.target.value;
       generate();
     });
     $('tone').addEventListener('change', (e) => {
+      checkpoint();
       state.tone = e.target.value;
       generate();
     });
 
     $('presets').addEventListener('click', (e) => {
       const btn = e.target.closest('.preset');
-      if (btn) usePreset(btn.dataset.id);
+      if (!btn) return;
+      checkpoint();
+      usePreset(btn.dataset.id);
     });
 
     $('tuning').addEventListener('input', (e) => {
       const { role, part } = e.target.dataset;
       if (!role) return;
+      checkpoint(`tune:${role}:${part || ''}`);
       if (role === 'case') state.colors.case = e.target.value;
       else state.colors[role][part] = e.target.value;
       state.source = 'custom';
       renderSource();
       renderPreview();
       renderRatio();
+      renderUndo();
       saveHash();
       // Refresh the contrast badges without rebuilding the input being dragged.
       const badges = $('tuning').querySelectorAll('.badge');
@@ -387,6 +558,7 @@
     });
 
     $('auto-legend').addEventListener('change', (e) => {
+      checkpoint();
       if (!e.target.checked) for (const g of GROUPS) state.colors[g].legend = legendFor(g);
       state.autoLegend = e.target.checked;
       renderAll();
@@ -398,24 +570,62 @@
     });
     $('paint').addEventListener('input', (e) => (state.paint = e.target.value));
 
-    $('preview').addEventListener('click', (e) => {
-      if (!state.paintMode) return;
-      const keyEl = e.target.closest('.key');
-      if (!keyEl) return;
+    // Paint (or un-paint) one key, then keep keyboard focus on it across the re-render.
+    function paintKey(id) {
+      checkpoint();
       const overrides = layoutOverrides();
-      const id = keyEl.dataset.id;
       if (overrides[id] === state.paint) delete overrides[id];
       else overrides[id] = state.paint;
       renderPreview();
       saveHash();
+      const again = $('preview').querySelector(`.key[data-id="${id}"]`);
+      if (again && again.matches('[tabindex]')) again.focus();
+    }
+
+    $('preview').addEventListener('click', (e) => {
+      if (!state.paintMode) return;
+      const keyEl = e.target.closest('.key');
+      if (keyEl) paintKey(keyEl.dataset.id);
+    });
+
+    $('preview').addEventListener('keydown', (e) => {
+      if (!state.paintMode || (e.key !== 'Enter' && e.key !== ' ')) return;
+      const keyEl = e.target.closest('.key');
+      if (!keyEl) return;
+      e.preventDefault();
+      paintKey(keyEl.dataset.id);
     });
 
     $('btn-clear').addEventListener('click', () => {
+      if (!Object.keys(layoutOverrides()).length) return;
+      checkpoint();
       state.overrides[state.layoutId] = {};
       renderPreview();
       saveHash();
     });
-    $('btn-random').addEventListener('click', randomize);
+
+    $('cvd').addEventListener('change', (e) => {
+      state.cvd = e.target.value;
+      renderPreview();
+    });
+
+    $('btn-undo').addEventListener('click', undo);
+    $('btn-redo').addEventListener('click', redo);
+    document.addEventListener('keydown', (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) undo();
+      else if ((key === 'z' && e.shiftKey) || key === 'y') redo();
+      else return;
+      e.preventDefault();
+    });
+
+    $('btn-save').addEventListener('click', saveCurrent);
+    $('saved').addEventListener('click', onSavedClick);
+    $('btn-random').addEventListener('click', () => {
+      checkpoint();
+      randomize();
+    });
     $('btn-share').addEventListener('click', share);
     $('btn-png').addEventListener('click', exportPng);
   }
@@ -436,7 +646,13 @@
       )
       .join('');
     $('paint').value = state.paint;
+    $('cvd').innerHTML =
+      '<option value="">通常の色</option>' +
+      Object.entries(color.CVD)
+        .map(([id, c]) => `<option value="${id}">${c.label}</option>`)
+        .join('');
     renderCredits();
+    renderSaved();
     renderChangelog();
 
     bind();

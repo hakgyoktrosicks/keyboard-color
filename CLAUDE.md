@@ -9,6 +9,8 @@
 - テスト: `npm test`（Node 組み込みテストランナー）。変更後は必ず実行する。
 - UI を変えたら Playwright（環境に導入済み）で表示確認する: コンソールエラーがないこと、390px 幅で横スクロールが出ないこと。
 - `main` へのマージで `.github/workflows/pages.yml` がテスト後に Pages へ自動デプロイする。公開対象は `index.html`・`css/`・`js/` のみ。
+- **元に戻す**: 状態を変える操作は、変更の**前**に `checkpoint(kind)` を呼ぶ。連続して発火する入力（色ピッカーのドラッグなど）は同じ `kind` を渡して1手にまとめる。表示だけの設定（ペイントモード、色覚シミュレーション）は履歴に入れない。
+- **保存**: 保存データは localStorage の `keyboard-color:saved`。読み込み時は共有URLと同じ `applyShared()` で検証し、壊れたデータでもページが動くようにする。
 - **更新履歴**: 利用者に見える変更（機能・レイアウト・プリセット・表記の追加や変更）は、`js/changelog.js` の先頭に `{ date, title, items }` を追記してから PR を出す。日付はマージ予定日（JST）、文章は利用者向けの日本語で書く。内部だけの変更（テスト・ドキュメント・CI）は載せない。ページ下部には新しい順に3件を表示し、残りは折りたたむ。
 
 ## レイアウト追加のルール
@@ -53,6 +55,12 @@
 | Preonic | OLKB が販売する 5×12 キーボード | — | 未調査 | — |
 | Let's Split系 | Wootpatoot 設計の 4×6×2 分割オーソリニア（Keebio Levinson も同系統） | ライセンスは見つからず | 未確認 | [1upkeyboards](https://1upkeyboards.com/shop/keyboard-kits/diy-40-kits/lets-split-v3/), [QMK levinson readme](https://git.rekahsoft.ca/rekahsoft/qmk-firmware/blame/branch/master/keyboards/keebio/levinson/readme.md) |
 | Nyquist系 | Keebio の 5×6×2 分割オーソリニア（既存知識のみ。検索で裏付けなし） | — | 未調査 | — |
+
+### 研究・データの参照
+
+| 参照名 | 対象 | 権利・ライセンス | 確認状況 | 出典 |
+| --- | --- | --- | --- | --- |
+| Machado 2009 | 色覚シミュレーションの変換行列（重症度1.0の1型・2型・3型） | 論文の数値。照合に使った colour-science のデータセットは BSD-3-Clause | 確認済（二次情報：colour-science 0.4.6 のデータセットで数値を照合） | [colour-science](https://github.com/colour-science/colour) |
 
 ### プリセット（`id`）
 
