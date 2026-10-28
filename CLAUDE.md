@@ -48,6 +48,8 @@
 | Sofle | オープンソースの分割キーボード | — | 未調査 | — |
 | Planck | OLKB が販売する 4×12 キーボード | ハードウェアのライセンスは見つからず（ファームウェアの QMK は GPL-2.0） | 未確認 | [QMK keyboards/planck](https://github.com/qmk/qmk_firmware/tree/master/keyboards/planck) |
 | Preonic | OLKB が販売する 5×12 キーボード | — | 未調査 | — |
+| Let's Split系 | Wootpatoot 設計の 4×6×2 分割オーソリニア（Keebio Levinson も同系統） | ライセンスは見つからず | 未確認 | [1upkeyboards](https://1upkeyboards.com/shop/keyboard-kits/diy-40-kits/lets-split-v3/), [QMK levinson readme](https://git.rekahsoft.ca/rekahsoft/qmk-firmware/blame/branch/master/keyboards/keebio/levinson/readme.md) |
+| Nyquist系 | Keebio の 5×6×2 分割オーソリニア（既存知識のみ。検索で裏付けなし） | — | 未調査 | — |
 
 ### プリセット（`id`）
 
