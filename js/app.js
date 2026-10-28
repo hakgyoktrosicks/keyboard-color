@@ -65,13 +65,20 @@
   }
 
   function renderLayouts() {
-    $('layouts').innerHTML = layouts.list
-      .map(
-        (l) =>
-          `<button type="button" class="layout-btn" data-id="${l.id}" aria-pressed="${l.id === state.layoutId}">` +
-          `<span>${l.name}</span>${l.tag ? `<small>${l.tag}</small>` : ''}</button>`
-      )
-      .join('');
+    $('layouts').innerHTML = layouts.CATEGORIES.map(
+      (cat) =>
+        `<h3 class="layout-cat">${cat.name}</h3><div class="layout-grid">` +
+        layouts.list
+          .filter((l) => l.cat === cat.id)
+          .map(
+            (l) =>
+              `<button type="button" class="layout-btn" data-id="${l.id}" aria-pressed="${l.id === state.layoutId}">` +
+              `<span class="layout-name">${l.name}${l.example ? `<small>例: ${l.example}</small>` : ''}</span>` +
+              `${l.tag ? `<small class="layout-tag">${l.tag}</small>` : ''}</button>`
+          )
+          .join('') +
+        `</div>`
+    ).join('');
     $('layout-desc').textContent = layouts.byId[state.layoutId].desc;
   }
 
@@ -165,16 +172,17 @@
     if (location.hash.length < 2) return false;
     try {
       const data = JSON.parse(atob(location.hash.slice(1)));
-      if (!layouts.byId[data.l] || !color.isHex(data.c.case)) return false;
+      const layoutId = layouts.resolveId(data.l);
+      if (!layoutId || !color.isHex(data.c.case)) return false;
       for (const g of GROUPS) {
         if (!color.isHex(data.c[g].cap) || !color.isHex(data.c[g].legend)) return false;
       }
       const overrides = {};
       for (const [id, hex] of Object.entries(data.o || {})) if (color.isHex(hex)) overrides[id] = hex;
-      state.layoutId = data.l;
+      state.layoutId = layoutId;
       state.colors = data.c;
       state.autoLegend = data.a !== false;
-      state.overrides[data.l] = overrides;
+      state.overrides[layoutId] = overrides;
       state.source = 'custom';
       return true;
     } catch {
