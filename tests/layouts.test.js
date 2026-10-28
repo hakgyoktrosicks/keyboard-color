@@ -60,6 +60,8 @@ test('layouts have the expected width and key count', () => {
     split60: [null, 60],
     ortho4x12: [12, 47],
     ortho5x12: [12, 59],
+    splitortho4x6: [13, 48],
+    splitortho5x6: [13, 60],
   };
   assert.deepEqual(Object.keys(expected).sort(), list.map((l) => l.id).sort());
   for (const [id, [width, count]] of Object.entries(expected)) {
@@ -83,7 +85,7 @@ test('rotated layouts sit in positive space', () => {
 });
 
 test('split layouts are mirror-symmetric in key count', () => {
-  for (const id of ['split34', 'split42', 'split58', 'split60']) {
+  for (const id of ['split34', 'split42', 'split58', 'split60', 'splitortho4x6', 'splitortho5x6']) {
     const left = byId[id].keys.filter((k) => k.part === 0).length;
     const right = byId[id].keys.filter((k) => k.part === 1).length;
     assert.equal(left, right, id);

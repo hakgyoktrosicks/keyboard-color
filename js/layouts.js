@@ -288,6 +288,26 @@
     ...ORTHO_ROWS.slice(2),
   ]);
 
+  // Split ortholinear: each 12-label row is cut into two 6-column halves with no stagger.
+  const SPLIT_ORTHO_BOTTOM = ['Ctrl', 'Fn', 'Alt', 'Gui', 'Lower', 'Space', 'Space', 'Raise', '←', '↓', '↑', '→'];
+  function splitOrtho(rows) {
+    return split({
+      stagger: [0, 0, 0, 0, 0, 0],
+      offset: 7,
+      left: rows.map((row) => row.slice(0, 6)),
+      right: rows.map((row) => row.slice(6)),
+      thumbs: [],
+    });
+  }
+  const splitOrtho4x6 = splitOrtho([...ORTHO_ROWS.slice(0, 3), SPLIT_ORTHO_BOTTOM]);
+  const splitOrtho5x6 = splitOrtho([
+    ['Esc', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Bksp'],
+    [...ORTHO_ROWS[0].slice(0, 11), 'Del'],
+    ['Ctrl', ...ORTHO_ROWS[1].slice(1)],
+    ORTHO_ROWS[2],
+    SPLIT_ORTHO_BOTTOM,
+  ]);
+
   // Shift rotated layouts back into positive space and compute their bounds.
   function finalize(def) {
     let keys = def.keys.map((key, i) => ({ ...key, id: String(i) }));
@@ -332,6 +352,8 @@
     { id: 'split60', cat: 'split', name: '分割 6×4＋親指5', example: 'Sofle', desc: '6×4＋親指5キー。内側にはロータリーエンコーダーを置くことが多い。', keys: split60 },
     { id: 'ortho4x12', cat: 'ortho', name: 'オーソリニア 4×12', example: 'Planck', desc: 'キーが格子状に並ぶ40%配列。レイヤー前提の極小構成。', keys: ortho4x12 },
     { id: 'ortho5x12', cat: 'ortho', name: 'オーソリニア 5×12', example: 'Preonic', desc: '4×12に数字列を加えた格子配列。', keys: ortho5x12 },
+    { id: 'splitortho4x6', cat: 'ortho', name: '分割オーソリニア 4×6×2', example: "Let's Split系", desc: '4×12の格子配列を左右に分割したもの。肩幅に合わせて離して置ける。', keys: splitOrtho4x6 },
+    { id: 'splitortho5x6', cat: 'ortho', name: '分割オーソリニア 5×6×2', example: 'Nyquist系', desc: '5×12の格子配列を左右に分割したもの。数字列あり。', keys: splitOrtho5x6 },
   ].map(finalize);
 
   const byId = Object.fromEntries(list.map((l) => [l.id, l]));
