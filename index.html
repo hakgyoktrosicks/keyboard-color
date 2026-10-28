@@ -25,6 +25,14 @@
           </div>
         </div>
         <p id="toast" class="toast" role="status" aria-live="polite"></p>
+        <section class="bom" aria-labelledby="bom-title">
+          <div class="bom-head">
+            <h2 id="bom-title">キーキャップ内訳</h2>
+            <button type="button" id="btn-bom-copy">テキストでコピー</button>
+          </div>
+          <p class="hint">この配色に必要なキーキャップを、色（キーキャップ色と刻印色の組み合わせ）とサイズごとに数えています。</p>
+          <ul id="bom" class="bom-list"></ul>
+        </section>
       </section>
 
       <aside class="panels">
@@ -32,6 +40,14 @@
           <h2>レイアウト</h2>
           <div id="layouts" class="layout-groups"></div>
           <p id="layout-desc" class="hint"></p>
+          <div class="std-row">
+            <span class="std-label">キー配列</span>
+            <div id="std-toggle" class="std-toggle" role="group" aria-label="キー配列">
+              <button type="button" data-std="ansi">ANSI（英語）</button>
+              <button type="button" data-std="jis">JIS（日本語）</button>
+            </div>
+          </div>
+          <p id="std-note" class="hint" hidden>このレイアウトはANSIのみです。</p>
         </section>
 
         <section class="panel">
@@ -51,6 +67,9 @@
               <select id="harmony"></select>
             </label>
             <p id="harmony-desc" class="hint"></p>
+            <p id="source-note" class="hint note" hidden>
+              現在の配色は手動で調整されたもの、または共有URLから読み込んだものです。ここを変更すると、配色ルールから作り直されます。
+            </p>
             <label class="field">
               <span>トーン</span>
               <select id="tone"></select>
@@ -110,6 +129,7 @@
     <script src="js/layouts.js"></script>
     <script src="js/palettes.js"></script>
     <script src="js/changelog.js"></script>
+    <script src="js/bom.js"></script>
     <script src="js/render.js"></script>
     <script src="js/app.js"></script>
   </body>

@@ -9,7 +9,7 @@
   'use strict';
 
   const ACCENT_LABELS = new Set(['Esc', 'Enter']);
-  const ALPHA_RE = /^[A-Z0-9`\-=[\]\\;',./*+]$/;
+  const ALPHA_RE = /^[A-Z0-9`\-=[\]\\;',./*+^@:¥]$/;
 
   function inferGroup(label) {
     if (ACCENT_LABELS.has(label)) return 'accent';
@@ -22,7 +22,22 @@
   }
 
   function makeKey(t, x, y, part = 0) {
-    return { l: t.l, x, y, w: t.w || 1, h: t.h || 1, g: t.g || inferGroup(t.l), part };
+    const key = { l: t.l, x, y, w: t.w || 1, h: t.h || 1, g: t.g || inferGroup(t.l), part };
+    if (t.shape) key.shape = t.shape;
+    return key;
+  }
+
+  // Rectangles that make up a key, in unrotated layout units. An L-shaped Enter
+  // (shape 'iso') is a full-width top row plus a bottom row inset by 0.25u on the left.
+  function rects(key) {
+    const rot = key.rot ? { rot: key.rot, rx: key.rx, ry: key.ry } : {};
+    if (key.shape === 'iso') {
+      return [
+        { x: key.x, y: key.y, w: key.w, h: 1, ...rot },
+        { x: key.x + 0.25, y: key.y + 1, w: key.w - 0.25, h: key.h - 1, ...rot },
+      ];
+    }
+    return [{ x: key.x, y: key.y, w: key.w, h: key.h, ...rot }];
   }
 
   // Four corners of a key in layout units, with rotation applied.
@@ -165,6 +180,44 @@
     [k('Shift', 2.25), ...Z_ROW, k('Shift', 1.75), '↑', '1', '2', '3', k('Enter', 1, { h: 2 })],
     [...BOTTOM_65, '0', '.'],
   ];
+
+  // JIS (Japanese) variants: ¥ ^ @ : keys, a 1u Backspace, an L-shaped Enter over
+  // two rows, a ろ key (labelled "\") left of right Shift, and 無変換 / 変換 / かな around Space.
+  const JIS_NUM_ROW = ['半/全', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', '¥', 'BS'];
+  const JIS_Q_ROW = [k('Tab', 1.5), ...Q_ROW.slice(0, 10), '@', '[', k('Enter', 1.5, { h: 2, shape: 'iso' })];
+  const JIS_A_ROW = [k('英数', 1.75), ...A_ROW.slice(0, 10), ':', ']', { gap: 1.25 }];
+  const JIS_SHIFT_ROW = [k('Shift', 2.25), ...Z_ROW, '\\', k('Shift', 1.75)];
+  const JIS_SHIFT_ROW_SHORT = [k('Shift', 1.25), ...Z_ROW, '\\', k('Shift', 1.75)];
+  const JIS_BOTTOM_60 = [k('Ctrl', 1.25), k('Win', 1.25), k('Alt', 1.25), k('無変換', 1.25), k('Space', 5), k('変換', 1.25), k('かな', 1.25), k('Alt', 1.25), k('Ctrl', 1.25)];
+  const JIS_BOTTOM_65 = [k('Ctrl', 1.25), k('Win', 1.25), k('Alt', 1.25), '無変換', k('Space', 5.25), '変換', 'かな', 'Fn', '←', '↓', '→'];
+
+  const rows60Jis = [JIS_NUM_ROW, JIS_Q_ROW, JIS_A_ROW, JIS_SHIFT_ROW, JIS_BOTTOM_60];
+  const rows65Jis = [
+    [...JIS_NUM_ROW, 'Home'],
+    [...JIS_Q_ROW, 'PgUp'],
+    [...JIS_A_ROW, 'PgDn'],
+    [...JIS_SHIFT_ROW_SHORT, '↑', 'End'],
+    JIS_BOTTOM_65,
+  ];
+  const rows75Jis = [rows75[0], [{ dy: 0.25 }, ...JIS_NUM_ROW, 'Home'], ...rows65Jis.slice(1)];
+  const rowsTklJis = [
+    rowsTkl[0],
+    [{ dy: 0.25 }, ...JIS_NUM_ROW, { gap: 0.25 }, 'Ins', 'Home', 'PgUp'],
+    [...JIS_Q_ROW, { gap: 0.25 }, 'Del', 'End', 'PgDn'],
+    JIS_A_ROW,
+    [...JIS_SHIFT_ROW, { gap: 1.25 }, '↑'],
+    [...JIS_BOTTOM_60, { gap: 0.25 }, '←', '↓', '→'],
+  ];
+  const rowsFullJis = rowsTklJis.map((row, i) => [...row, ...numpad[i]]);
+  const rows96Jis = [
+    rows96[0],
+    [{ dy: 0.25 }, ...JIS_NUM_ROW, 'Num', '/', '*', '-'],
+    [...JIS_Q_ROW, '7', '8', '9', k('+', 1, { h: 2 })],
+    [...JIS_A_ROW, '4', '5', '6'],
+    [...JIS_SHIFT_ROW_SHORT, '↑', '1', '2', '3', k('Enter', 1, { h: 2 })],
+    [...JIS_BOTTOM_65, '0', '.'],
+  ];
+  const JIS_ROWS = { 60: rows60Jis, 65: rows65Jis, 75: rows75Jis, tkl: rowsTklJis, 96: rows96Jis, 100: rowsFullJis };
 
   // Ergonomic "Alice-style" layout: two row-staggered clusters angled ±10°.
   const ALICE_ANGLE = 10;
@@ -336,7 +389,7 @@
     { id: 'ortho', name: 'オーソリニア（格子）' },
   ];
 
-  const list = [
+  const baseList = [
     { id: '40', cat: 'row', name: '40%', desc: '数字列とFキーを省いた最小クラスの配列。数字や記号はレイヤーで入力する。', keys: fromRows(rows40) },
     { id: '60', cat: 'row', name: '60%', tag: '定番', desc: '最も規格化されたコンパクト配列。ケースやキーキャップの選択肢が最も豊富。', keys: fromRows(rows60) },
     { id: '60wkl', cat: 'row', name: '60% 分割BS・WKL', example: 'HHKB系', desc: 'Backspaceを分割し、Winキーを省いて両脇を空けた配列。HHKBと同系統。', keys: fromRows(rows60Wkl) },
@@ -354,7 +407,20 @@
     { id: 'ortho5x12', cat: 'ortho', name: 'オーソリニア 5×12', example: 'Preonic', desc: '4×12に数字列を加えた格子配列。', keys: ortho5x12 },
     { id: 'splitortho4x6', cat: 'ortho', name: '分割オーソリニア 4×6×2', example: "Let's Split系", desc: '4×12の格子配列を左右に分割したもの。肩幅に合わせて離して置ける。', keys: splitOrtho4x6 },
     { id: 'splitortho5x6', cat: 'ortho', name: '分割オーソリニア 5×6×2', example: 'Nyquist系', desc: '5×12の格子配列を左右に分割したもの。数字列あり。', keys: splitOrtho5x6 },
-  ].map(finalize);
+  ];
+
+  // Layouts with a JIS variant link to it via `jis`; the variant points back via `variantOf`.
+  const list = baseList
+    .flatMap((def) => {
+      const jisRows = JIS_ROWS[def.id];
+      if (!jisRows) return [def];
+      const jisId = `${def.id}-jis`;
+      return [
+        { ...def, jis: jisId },
+        { ...def, id: jisId, variantOf: def.id, std: 'jis', keys: fromRows(jisRows) },
+      ];
+    })
+    .map(finalize);
 
   const byId = Object.fromEntries(list.map((l) => [l.id, l]));
 
@@ -362,5 +428,5 @@
   const ALIASES = { corne: 'split42', lily58: 'split58', planck: 'ortho4x12' };
   const resolveId = (id) => (byId[id] ? id : ALIASES[id] && byId[ALIASES[id]] ? ALIASES[id] : null);
 
-  return { list, byId, CATEGORIES, corners, inferGroup, resolveId };
+  return { list, byId, CATEGORIES, corners, rects, inferGroup, resolveId };
 });

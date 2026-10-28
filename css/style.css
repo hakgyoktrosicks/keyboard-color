@@ -469,3 +469,110 @@ input[type='color']:disabled {
     grid-column: 1;
   }
 }
+
+.std-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+
+.std-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.std-toggle button[aria-pressed='true'] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.std-toggle button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.note {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+}
+
+.bom {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.bom-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.bom-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.bom-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.bom-list li {
+  display: grid;
+  grid-template-columns: auto minmax(7em, auto) auto 1fr;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.bom-swatch {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.bom-color {
+  display: grid;
+}
+
+.bom-color small,
+.bom-sizes {
+  color: var(--muted);
+}
+
+.bom-total {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 480px) {
+  .bom-list li {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .bom-sizes {
+    grid-column: 2 / -1;
+  }
+}
+
+/* Keep the sticky preview reachable when the keycap breakdown grows (many paint colors). */
+@media (min-width: 961px) {
+  .stage {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+}
