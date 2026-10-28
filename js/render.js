@@ -52,8 +52,9 @@
     );
   }
 
-  // colorsFor(key) -> { cap, legend }
-  function renderKeyboard(layout, caseColor, colorsFor) {
+  // colorsFor(key) -> { cap, legend }. With `interactive`, keys are focusable buttons
+  // (used while painting so keys can be reached with Tab and painted with Enter/Space).
+  function renderKeyboard(layout, caseColor, colorsFor, { interactive = false } = {}) {
     const width = (layout.width + PAD * 2) * U;
     const height = (layout.height + PAD * 2) * U;
     const px = (v) => +((v + PAD) * U).toFixed(2);
@@ -83,8 +84,9 @@
         : `<rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="7" fill="${shade(cap, -14)}"/>` +
           `<rect x="${x + 7}" y="${y + 4}" width="${w - 14}" height="${h - 15}" rx="5" fill="${cap}"/>`;
       const legendY = y + ((iso ? U : h) - 11) / 2 + 4;
+      const a11y = interactive ? ` tabindex="0" role="button" aria-label="${esc(key.l)} キーを塗る"` : '';
       parts.push(
-        `<g class="key" data-id="${key.id}"${transform}>` +
+        `<g class="key" data-id="${key.id}"${transform}${a11y}>` +
           body +
           `<text x="${x + w / 2}" y="${legendY}" fill="${legend}" font-size="${fontSize(key.l)}" ` +
           `font-family="${esc(FONT)}" font-weight="600" text-anchor="middle" dominant-baseline="middle">${esc(key.l)}</text>` +
@@ -94,7 +96,7 @@
 
     return (
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" ` +
-      `role="img" aria-label="${esc(layout.name)} キーボードのプレビュー">${parts.join('')}</svg>`
+      `role="${interactive ? 'group' : 'img'}" aria-label="${esc(layout.name)} キーボードのプレビュー">${parts.join('')}</svg>`
     );
   }
 
