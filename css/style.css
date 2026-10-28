@@ -214,6 +214,18 @@ button.primary {
   color: var(--muted);
 }
 
+.layout-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.layout-cat {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .layout-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -228,11 +240,19 @@ button.primary {
   text-align: left;
 }
 
-.layout-btn small {
-  flex-shrink: 0;
-  white-space: nowrap;
+.layout-name {
+  display: grid;
+}
+
+.layout-name small,
+.layout-tag {
   font-size: 0.7rem;
   color: var(--muted);
+}
+
+.layout-tag {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .layout-btn[aria-pressed='true'],
@@ -372,4 +392,19 @@ input[type='color']:disabled {
 
 #btn-clear {
   margin-top: 12px;
+}
+
+.credits {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.credits summary {
+  cursor: pointer;
+}
+
+.credits ul {
+  margin: 4px 0 0;
+  padding-left: 1.25em;
 }

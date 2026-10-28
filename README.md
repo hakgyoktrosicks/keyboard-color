@@ -12,10 +12,11 @@ python3 -m http.server 8000
 
 ## 機能
 
-- **レイアウト**: 自作キーボードでよく使われる8種類
-  - ロウスタッガード: 60% / 65% / 75% / TKL（80%） / フルサイズ（100%）
-  - 分割・カラムスタッガード: Corne（crkbd、3×6＋親指3） / Lily58（6×4＋親指4）
-  - オーソリニア: Planck（4×12）
+- **レイアウト**: 自作キーボードでよく使われる15種類
+  - ロウスタッガード: 40% / 60% / 60% 分割BS・WKL（HHKB系） / 65% / 75% / TKL（80%） / 96%（1800系） / フルサイズ（100%）
+  - エルゴノミクス: エルゴ 65%（Alice系、左右±10°）
+  - 分割: 3×5＋親指2（Ferris Sweep系） / 3×6＋親指3（Corne系） / 6×4＋親指4（Lily58系） / 6×4＋親指5（Sofle系）
+  - オーソリニア: 4×12（Planck系） / 5×12（Preonic系）
 - **配色ルールから生成**: ベースカラー1色から、色彩理論の定番ルールで配色を自動生成
   - モノクロマティック / 類似色 / 補色 / 分裂補色 / トライアド / テトラード
   - トーン: ライト / パステル / ビビッド / ダーク
@@ -43,3 +44,15 @@ npm test
 ```
 
 Node.js 18以降の組み込みテストランナーで、色計算、レイアウトの整合性（キーの重なり、幅、キー数）、プリセットの形式を検証します。
+
+## クレジット・表記について
+
+本アプリは非公式のツールで、掲載しているキーボード・配色の作者や販売元とは関係ありません。
+キーボード名・配色名は配列や配色の系統を説明する目的で参照しているもので、各名称の権利は各権利者に帰属します。
+レイアウトデータは公開情報をもとに簡略化した独自のもので、実機の寸法とは異なる場合があります。
+
+プリセットの一部は以下の配色を参考にしています。
+
+- [Nord](https://github.com/nordtheme/nord) — Copyright (c) 2016-present Sven Greb (Arctic Ice Studio), MIT License
+- [Solarized](https://github.com/altercation/solarized) — Copyright (c) 2011 Ethan Schoonover, MIT License
+- [Dracula](https://github.com/dracula/dracula-theme) — Copyright (c) Dracula Theme, MIT License
