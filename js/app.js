@@ -235,6 +235,13 @@
     img.src = url;
   }
 
+  function renderCredits() {
+    const credits = new Map(presets.filter((p) => p.credit).map((p) => [p.credit.name, p.credit]));
+    $('credits-list').innerHTML = [...credits.values()]
+      .map((c) => `<li><a href="${c.url}" rel="noopener">${c.name}</a> — ${c.copyright}, ${c.license} License</li>`)
+      .join('');
+  }
+
   // ---------- events ----------
 
   function bind() {
@@ -334,6 +341,7 @@
       )
       .join('');
     $('paint').value = state.paint;
+    renderCredits();
 
     bind();
     if (loadHash()) renderAll();

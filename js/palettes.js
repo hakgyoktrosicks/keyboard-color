@@ -1,5 +1,6 @@
 // Curated palettes based on well-known design color schemes.
 // Roles: case (housing), alpha (letters/numbers), mod (modifiers), accent (Esc/Enter).
+// Presets derived from a third-party palette must carry `credit`; see CLAUDE.md.
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -12,24 +13,28 @@
       id: 'nord',
       name: 'Nord',
       desc: '北極圏をイメージした寒色系のUIパレット。',
+      credit: { name: 'Nord', copyright: 'Copyright (c) 2016-present Sven Greb (Arctic Ice Studio)', license: 'MIT', url: 'https://github.com/nordtheme/nord' },
       colors: { case: '#3b4252', alpha: '#eceff4', mod: '#4c566a', accent: '#88c0d0' },
     },
     {
       id: 'solarized-light',
       name: 'Solarized Light',
       desc: '色相と明度を精密に設計した定番パレットのライト版。',
+      credit: { name: 'Solarized', copyright: 'Copyright (c) 2011 Ethan Schoonover', license: 'MIT', url: 'https://github.com/altercation/solarized' },
       colors: { case: '#eee8d5', alpha: '#fdf6e3', mod: '#93a1a1', accent: '#cb4b16' },
     },
     {
       id: 'solarized-dark',
       name: 'Solarized Dark',
       desc: 'Solarized のダーク版。深い青緑に黄色の差し色。',
+      credit: { name: 'Solarized', copyright: 'Copyright (c) 2011 Ethan Schoonover', license: 'MIT', url: 'https://github.com/altercation/solarized' },
       colors: { case: '#002b36', alpha: '#073642', mod: '#586e75', accent: '#b58900' },
     },
     {
       id: 'dracula',
       name: 'Dracula',
       desc: '暗い紫灰にネオンピンクを効かせたダークテーマ。',
+      credit: { name: 'Dracula', copyright: 'Copyright (c) Dracula Theme', license: 'MIT', url: 'https://github.com/dracula/dracula-theme' },
       colors: { case: '#282a36', alpha: '#44475a', mod: '#6272a4', accent: '#ff79c6' },
     },
     {
