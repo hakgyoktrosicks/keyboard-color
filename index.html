@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Keyboard Color Lab</title>
+    <meta name="description" content="自作キーボードの配色をシミュレーションするWebアプリ" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Keyboard Color Lab</h1>
+      <p>自作キーボードの配色シミュレーター</p>
+    </header>
+
+    <main class="app">
+      <section class="stage" aria-label="プレビュー">
+        <div id="preview" class="preview"></div>
+        <div class="stage-meta">
+          <div id="ratio" class="ratio" aria-live="polite"></div>
+          <div class="actions">
+            <button type="button" id="btn-random">ランダム</button>
+            <button type="button" id="btn-share">共有URLをコピー</button>
+            <button type="button" id="btn-png" class="primary">PNGで保存</button>
+          </div>
+        </div>
+        <p id="toast" class="toast" role="status" aria-live="polite"></p>
+      </section>
+
+      <aside class="panels">
+        <section class="panel">
+          <h2>レイアウト</h2>
+          <div id="layouts" class="layout-grid"></div>
+          <p id="layout-desc" class="hint"></p>
+        </section>
+
+        <section class="panel">
+          <h2>配色</h2>
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" id="tab-harmony" aria-controls="pane-harmony">配色ルールから生成</button>
+            <button type="button" role="tab" id="tab-preset" aria-controls="pane-preset">プリセット</button>
+          </div>
+
+          <div id="pane-harmony" role="tabpanel" class="pane">
+            <label class="field">
+              <span>ベースカラー</span>
+              <input type="color" id="base" />
+            </label>
+            <label class="field">
+              <span>配色ルール</span>
+              <select id="harmony"></select>
+            </label>
+            <p id="harmony-desc" class="hint"></p>
+            <label class="field">
+              <span>トーン</span>
+              <select id="tone"></select>
+            </label>
+          </div>
+
+          <div id="pane-preset" role="tabpanel" class="pane" hidden>
+            <div id="presets" class="preset-grid"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>微調整</h2>
+          <div id="tuning" class="tuning"></div>
+          <label class="check">
+            <input type="checkbox" id="auto-legend" />
+            <span>刻印色をコントラストが高くなるよう自動調整</span>
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>個別ペイント</h2>
+          <div class="paint-row">
+            <label class="check">
+              <input type="checkbox" id="paint-mode" />
+              <span>キーをクリックして塗る</span>
+            </label>
+            <input type="color" id="paint" aria-label="ペイント色" />
+          </div>
+          <p class="hint">同じ色のキーをもう一度クリックすると元に戻ります。</p>
+          <button type="button" id="btn-clear">個別設定をすべて解除</button>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        配色ルールは<strong>60-30-10の法則</strong>（主色60%・副色30%・アクセント10%）に沿って、
+        数の多いアルファキーに主色、モディファイアに副色、Esc/Enterにアクセントを割り当てます。
+      </p>
+    </footer>
+
+    <script src="js/color.js"></script>
+    <script src="js/layouts.js"></script>
+    <script src="js/palettes.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
