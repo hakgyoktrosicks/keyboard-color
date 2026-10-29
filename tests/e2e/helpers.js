@@ -44,6 +44,8 @@ async function setup() {
       page.on('pageerror', (e) => page.errors.push(e.message));
       page.on('console', (m) => m.type() === 'error' && page.errors.push(m.text()));
       await page.goto(server.url + (hash ? `#${hash}` : ''));
+      // init() is async (it decodes the share URL); it marks <html data-ready> when done.
+      await page.waitForSelector('html[data-ready]');
       return page;
     },
     newContext: (opts = {}) => browser.newContext({ viewport: { width: 1400, height: 1000 }, ...opts }),
@@ -55,8 +57,17 @@ async function setup() {
 }
 
 // Helpers that read app state from the page.
+// The URL hash is written asynchronously; wait for the latest write before reading it.
+const currentHash = (page) =>
+  page.evaluate(async () => {
+    await window.KC.share.pending;
+    return location.hash.slice(1);
+  });
 const shareState = (page) =>
-  page.evaluate(() => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(location.hash.slice(1)), (c) => c.charCodeAt(0)))));
+  page.evaluate(async () => {
+    await window.KC.share.pending;
+    return window.KC.share.decode(location.hash.slice(1));
+  });
 const keyFill = (page, id) => page.$eval(`#preview .key[data-id="${id}"] rect:nth-of-type(2)`, (el) => el.getAttribute('fill'));
 const bomTotal = (page) => page.$$eval('.bom-total', (xs) => xs.reduce((n, x) => n + parseInt(x.textContent, 10), 0));
 const pressedLayout = (page) => page.$eval('.layout-btn[aria-pressed="true"]', (x) => x.dataset.id);
@@ -64,4 +75,4 @@ const inputValue = (page, selector) => page.$eval(selector, (x) => x.value);
 const keyIds = (page, layoutId, labels) =>
   page.evaluate(([id, ls]) => window.KC.layouts.byId[id].keys.filter((k) => ls.includes(k.l)).map((k) => k.id), [layoutId, labels]);
 
-module.exports = { setup, shareState, keyFill, bomTotal, pressedLayout, inputValue, keyIds };
+module.exports = { setup, currentHash, shareState, keyFill, bomTotal, pressedLayout, inputValue, keyIds };

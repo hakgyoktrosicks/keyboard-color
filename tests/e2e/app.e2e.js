@@ -1,7 +1,7 @@
 // Browser tests for the UI. Run with `npm run test:e2e` (needs Playwright + Chromium).
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { setup, shareState, keyFill, bomTotal, pressedLayout, inputValue, keyIds } = require('./helpers.js');
+const { setup, currentHash, shareState, keyFill, bomTotal, pressedLayout, inputValue, keyIds } = require('./helpers.js');
 
 let env;
 before(async () => {
@@ -118,7 +118,7 @@ test('share URL restores layout, palette source, paint and groups', async () => 
   await page.selectOption('#key-tool', 'paint');
   await page.fill('#paint', '#123456');
   await page.click('#preview .key[data-id="2"]');
-  const hash = (await shareState(page)) && (await page.evaluate(() => location.hash.slice(1)));
+  const hash = await currentHash(page);
 
   const other = await env.page({ hash });
   assert.equal(await pressedLayout(other), '60');
@@ -231,7 +231,7 @@ test('KLE export: Raw data re-imports to the same layout and colours; JSON downl
   assert.equal(await page.$$eval('.bom-sizes', (xs) => xs.some((x) => x.textContent.includes('L字Enter'))), true);
 
   // Regression: Japanese names / legends used to break the share URL (btoa is Latin-1 only).
-  const shared = await env.page({ hash: await page.evaluate(() => location.hash.slice(1)) });
+  const shared = await env.page({ hash: await currentHash(page) });
   assert.equal(await pressedLayout(shared), 'kle');
   assert.equal(await shared.locator('#preview .key').count(), keyCount);
   assert.match(await shared.$eval('.layout-btn[data-id="kle"]', (x) => x.textContent), /60%（JIS）/);
@@ -243,4 +243,41 @@ test('KLE export: Raw data re-imports to the same layout and colours; JSON downl
   assert.ok(Array.isArray(json) && json.length > 1);
   assert.equal(json[0].notes, 'Keyboard Color Lab で作成');
   assert.deepEqual(page.errors, []);
+});
+
+test('share URLs are compressed and URL-safe; old uncompressed links still open', async () => {
+  const page = await env.page();
+  await page.click('.kle-import summary');
+  // A large imported layout: the full-size JIS board exported to KLE and read back.
+  await page.click('.layout-btn[data-id="100"]');
+  await page.click('#std-toggle [data-std="jis"]');
+  await page.click('#btn-kle-raw');
+  await page.fill('#kle-text', await page.$eval('#kle-out', (x) => x.value));
+  await page.click('#btn-kle');
+  const hash = await currentHash(page);
+  assert.match(hash, /^z\.[A-Za-z0-9_-]+$/);
+  const legacyLength = await page.evaluate(async () => {
+    const json = new TextEncoder().encode(JSON.stringify(await window.KC.share.decode(location.hash.slice(1))));
+    return Math.ceil(json.length / 3) * 4;
+  });
+  assert.ok(hash.length < legacyLength / 2, `${hash.length} vs ${legacyLength}`);
+
+  // A link made before compression (plain Base64 JSON) opens as before.
+  const old = Buffer.from(
+    JSON.stringify({
+      l: '60',
+      c: { case: '#202020', alpha: { cap: '#fafafa', legend: '#000000' }, mod: { cap: '#3366cc', legend: '#ffffff' }, accent: { cap: '#ff6600', legend: '#000000' } },
+      a: true,
+      o: { 3: '#00ff00' },
+    })
+  ).toString('base64');
+  const oldPage = await env.page({ hash: old });
+  assert.equal(await pressedLayout(oldPage), '60');
+  assert.equal(await keyFill(oldPage, '3'), '#00ff00');
+  assert.match(await currentHash(oldPage), /^z\./, 'the URL is rewritten in the new format');
+
+  const broken = await env.page({ hash: 'z.not-valid' });
+  assert.equal(await pressedLayout(broken), '65');
+  assert.match(await broken.$eval('#toast', (x) => x.textContent), /読み込めませんでした/);
+  assert.deepEqual([...page.errors, ...oldPage.errors, ...broken.errors], []);
 });
