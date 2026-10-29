@@ -19,6 +19,7 @@ python3 -m http.server 8000
   - オーソリニア: 4×12（Planck系） / 5×12（Preonic系） / 分割 4×6×2（Let's Split系） / 分割 5×6×2（Nyquist系）
   - 60% / 65% / 75% / TKL / 96% / フルサイズは ANSI（英語）と JIS（日本語）を切り替え可能
   - [keyboard-layout-editor.com](https://www.keyboard-layout-editor.com/)（KLE）の JSON / Raw data から任意のレイアウトを読み込み可能（回転・L字Enter などの異形キー・分割配列に対応）
+  - 今のレイアウトと配色を KLE の Raw data / JSON として書き出し可能（キーキャップ色 `c`・刻印色 `t`・ケース色 `backcolor`）
 - **配色ルールから生成**: ベースカラー1色から、色彩理論の定番ルールで配色を自動生成
   - モノクロマティック / 類似色 / 補色 / 分裂補色 / トライアド / テトラード
   - トーン: ライト / パステル / ビビッド / ダーク
@@ -44,7 +45,7 @@ python3 -m http.server 8000
 | `js/changelog.js` | ページ下部に表示する更新履歴 |
 | `js/bom.js` | キーキャップ内訳（色・サイズごとの個数）の集計 |
 | `js/history.js` | 元に戻す・やり直すの履歴管理 |
-| `js/kle.js` | KLE の JSON / Raw data の読み込み |
+| `js/kle.js` | KLE の JSON / Raw data の読み込みと書き出し |
 | `js/render.js` | SVG描画 |
 | `js/app.js` | UIと状態管理 |
 
@@ -76,6 +77,6 @@ PR では GitHub Actions がどちらのテストも実行し、`main` へのデ
 - [Solarized](https://github.com/altercation/solarized) — Copyright (c) 2011 Ethan Schoonover, MIT License
 - [Dracula](https://github.com/dracula/dracula-theme) — Copyright (c) 2023 Dracula Theme, MIT License
 
-KLE 形式の読み込みは独自実装です。形式の解釈は [kle-serial](https://github.com/ijprest/kle-serial)（MIT）と、KLE エディタの公開ソースでの挙動（`rx` / `ry` 指定時にカーソルを回転中心へ戻す）に合わせています。KLE エディタ自体のコードは複製していません。
+KLE 形式の読み込み・書き出しは独自実装です。形式の解釈は [kle-serial](https://github.com/ijprest/kle-serial)（MIT）と、KLE エディタの公開ソースでの挙動（`rx` / `ry` 指定時にカーソルを回転中心へ戻す）に合わせています。KLE エディタ自体のコードは複製していません。
 
 色覚シミュレーションは、Machado, Oliveira & Fernandes, "A Physiologically-based Model for Simulation of Color Vision Deficiency" (IEEE TVCG, 2009) の重症度1.0の行列を使い、線形RGBに適用しています。数値は [colour-science](https://github.com/colour-science/colour)（BSD-3-Clause）のデータセット `CVD_MATRICES_MACHADO2010` で確認しました。

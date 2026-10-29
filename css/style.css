@@ -691,3 +691,26 @@ button:disabled:hover {
 .paint-row[hidden] {
   display: none;
 }
+
+.kle-sub {
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+}
+
+.kle-import code {
+  font-size: 0.8em;
+}
+
+#kle-out-wrap {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+#kle-out-wrap[hidden] {
+  display: none;
+}
+
+.kle-import #kle-out {
+  margin-top: 8px;
+}
