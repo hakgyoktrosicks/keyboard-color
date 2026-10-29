@@ -12,7 +12,7 @@
 - `main` へのマージで `.github/workflows/pages.yml` がテスト後に Pages へ自動デプロイする。公開対象は `index.html`・`css/`・`js/` のみ。
 - **キーごとの設定**: `state.groups[layoutId][keyId]` はキーのグループ付け替え（配色に追従）、`state.overrides` は色の固定（追従しない）。色の計算は必ず `groupOf(key)` を通す。
 - **元に戻す**: 状態を変える操作は、変更の**前**に `checkpoint(kind)` を呼ぶ。連続して発火する入力（色ピッカーのドラッグなど）は同じ `kind` を渡して1手にまとめる。表示だけの設定（ペイントモード、色覚シミュレーション）は履歴に入れない。
-- **共有 URL**: ハッシュは「UTF-8 の JSON を Base64」にしたもの（`encodeState()` / `decodeState()`）。`btoa()` に文字列を直接渡さない（日本語で例外になる）。
+- **共有 URL**: `js/share.js` が符号化する。新形式は `z.` ＋ base64url(deflate-raw(UTF-8 の JSON))（ブラウザ標準の `CompressionStream`）。旧形式（UTF-8 JSON の素の Base64。必ず `ey` で始まる）も読めるよう残すこと（既に配った URL がある）。展開後の上限は `MAX_BYTES`（圧縮爆弾対策）。符号化は非同期なので、`saveHash()` は最後の書き込みだけを URL に反映し、テストは `KC.share.pending` を待ってから URL を読む。初期化完了で `<html data-ready>` が付く。`btoa()` に文字列を直接渡さない（日本語で例外になる）。
 - **保存**: 保存データは localStorage の `keyboard-color:saved`。読み込み時は共有URLと同じ `applyShared()` で検証し、壊れたデータでもページが動くようにする。
 - **KLE 読み込み**: `js/kle.js` は独自実装。KLE エディタ（ijprest/keyboard-layout-editor）のコードは「All rights reserved」で寛容なライセンスではないため**複製しない**（形式の解釈は MIT の kle-serial と、エディタの挙動に合わせる）。`rx` / `ry` を指定するとカーソルが回転中心へ戻る点はエディタに合わせている（2019 年版 kle-serial とは異なる）。共有 URL・保存データの `k` は `unpack()` で検証してから使う。テストの KLE データは自作し、KLE のサンプルを複製しない。書き出し（`serialize()`）は `parseKle()` の厳密な逆として実装し、`tests/kle-export.test.js` が全レイアウトで「書き出し→読み込み」の一致を確かめる。読み込み側の規則を変えたら書き出し側も合わせる。
 - **更新履歴**: 利用者に見える変更（機能・レイアウト・プリセット・表記の追加や変更）は、`js/changelog.js` の先頭に `{ date, title, items }` を追記してから PR を出す。日付はマージ予定日（JST）、文章は利用者向けの日本語で書く。内部だけの変更（テスト・ドキュメント・CI）は載せない。ページ下部には新しい順に3件を表示し、残りは折りたたむ。

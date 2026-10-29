@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const { color, layouts, presets, changelog, bom, kle, renderKeyboard } = window.KC;
+  const shareCodec = window.KC.share;
   // Not destructured as `history`: that name is the browser's window.history (used for the URL hash).
   const undoStack = window.KC.history.createHistory();
 
@@ -314,30 +315,28 @@
     };
   }
 
-  // Base64 of the UTF-8 JSON. btoa() alone only takes Latin-1, and imported KLE layouts can
-  // carry Japanese names and legends. ASCII-only URLs made before this decode the same way.
-  function encodeState() {
-    let binary = '';
-    for (const byte of new TextEncoder().encode(JSON.stringify(shareData()))) binary += String.fromCharCode(byte);
-    return btoa(binary);
-  }
-
-  function decodeState(hash) {
-    const bytes = Uint8Array.from(atob(hash), (c) => c.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes));
-  }
+  // The hash is compressed asynchronously (js/share.js). Writes can finish out of order, so
+  // only the most recent one may update the URL. `shareCodec.pending` lets tests (and share())
+  // wait for the URL to catch up with the state.
+  let hashSeq = 0;
 
   function saveHash() {
-    history.replaceState(null, '', `#${encodeState()}`);
+    const seq = ++hashSeq;
+    shareCodec.pending = shareCodec.encode(shareData()).then((hash) => {
+      if (seq === hashSeq) history.replaceState(null, '', `#${hash}`);
+    });
+    return shareCodec.pending;
   }
 
-  function loadHash() {
+  async function loadHash() {
     if (location.hash.length < 2) return false;
     try {
-      return applyShared(decodeState(location.hash.slice(1)));
+      if (applyShared(await shareCodec.decode(location.hash.slice(1)))) return true;
     } catch {
-      return false;
+      // fall through
     }
+    toast('共有URLを読み込めませんでした。初期状態で開きます');
+    return false;
   }
 
   // Validate and apply shareData(). Returns false (leaving state untouched) when invalid.
@@ -551,7 +550,7 @@
   }
 
   async function share() {
-    saveHash();
+    await saveHash();
     try {
       await navigator.clipboard.writeText(location.href);
       toast('共有URLをコピーしました');
@@ -790,7 +789,7 @@
     $('btn-png').addEventListener('click', exportPng);
   }
 
-  function init() {
+  async function init() {
     $('harmony').innerHTML = Object.entries(color.HARMONIES)
       .map(([id, h]) => `<option value="${id}">${h.label}</option>`)
       .join('');
@@ -816,8 +815,10 @@
     renderChangelog();
 
     bind();
-    if (loadHash()) renderAll();
+    if (await loadHash()) renderAll();
     else generate();
+    await shareCodec.pending;
+    document.documentElement.dataset.ready = 'true';
   }
 
   init();
