@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const { color, layouts, presets, changelog, bom, renderKeyboard } = window.KC;
+  const { color, layouts, presets, changelog, bom, kle, renderKeyboard } = window.KC;
   // Not destructured as `history`: that name is the browser's window.history (used for the URL hash).
   const undoStack = window.KC.history.createHistory();
 
@@ -21,13 +21,35 @@
     paintMode: false,
     paint: '#e4572e',
     cvd: '', // colour vision simulation for the preview only ('' = off)
+    imported: null, // layout imported from KLE: { name, keys } (shown as layout id 'kle')
   };
 
   // State that undo / redo and saved designs restore. View-only settings (paint mode,
   // simulation) are left out on purpose.
-  const UNDOABLE = ['layoutId', 'std', 'source', 'base', 'harmony', 'tone', 'presetId', 'autoLegend', 'colors', 'overrides'];
+  const UNDOABLE = ['layoutId', 'std', 'source', 'base', 'harmony', 'tone', 'presetId', 'autoLegend', 'colors', 'overrides', 'imported'];
 
   const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+  // The imported KLE layout is rebuilt only when state.imported changes (undo replaces the object).
+  let builtFrom = null;
+  let builtLayout = null;
+
+  function currentLayout() {
+    if (state.layoutId === 'kle' && state.imported) {
+      if (builtFrom !== state.imported) {
+        builtFrom = state.imported;
+        builtLayout = layouts.buildLayout({
+          id: 'kle',
+          name: state.imported.name || '読み込んだレイアウト',
+          desc: `keyboard-layout-editor から読み込んだレイアウト（${state.imported.keys.length}キー）。`,
+          keys: state.imported.keys,
+        });
+      }
+      return builtLayout;
+    }
+    return layouts.byId[state.layoutId] || layouts.byId['65'];
+  }
 
   function applyRoles(roles) {
     state.colors = { case: roles.case };
@@ -51,7 +73,7 @@
 
   // Actual colors: used for PNG export and the keycap breakdown.
   function currentSvg() {
-    return renderKeyboard(layouts.byId[state.layoutId], state.colors.case, colorsFor);
+    return renderKeyboard(currentLayout(), state.colors.case, colorsFor);
   }
 
   // What the preview shows: colors passed through the selected vision simulation.
@@ -61,7 +83,7 @@
       const { cap, legend } = colorsFor(key);
       return { cap: sim(cap), legend: sim(legend) };
     };
-    return renderKeyboard(layouts.byId[state.layoutId], sim(state.colors.case), simColorsFor, { interactive: state.paintMode });
+    return renderKeyboard(currentLayout(), sim(state.colors.case), simColorsFor, { interactive: state.paintMode });
   }
 
   // ---------- rendering ----------
@@ -74,7 +96,7 @@
   }
 
   function currentBom() {
-    return bom.computeBom(layouts.byId[state.layoutId].keys, colorsFor);
+    return bom.computeBom(currentLayout().keys, colorsFor);
   }
 
   function renderBom() {
@@ -94,7 +116,7 @@
   }
 
   function renderRatio() {
-    const keys = layouts.byId[state.layoutId].keys;
+    const keys = currentLayout().keys;
     const counts = { alpha: 0, mod: 0, accent: 0 };
     for (const key of keys) counts[key.g]++;
     $('ratio').innerHTML =
@@ -119,10 +141,10 @@
           )
           .join('') +
         `</div>`
-    ).join('');
-    $('layout-desc').textContent = layouts.byId[state.layoutId].desc;
+    ).join('') + importedLayoutButton();
+    $('layout-desc').textContent = currentLayout().desc;
     const hasJis = Boolean(baseLayout().jis);
-    const std = layouts.byId[state.layoutId].std || 'ansi';
+    const std = currentLayout().std || 'ansi';
     for (const btn of $('std-toggle').querySelectorAll('button')) {
       btn.disabled = !hasJis;
       btn.setAttribute('aria-pressed', btn.dataset.std === std);
@@ -130,13 +152,27 @@
     $('std-note').hidden = hasJis;
   }
 
+  function importedLayoutButton() {
+    if (!state.imported) return '';
+    const name = esc(state.imported.name || '読み込んだレイアウト');
+    return (
+      `<h3 class="layout-cat">読み込んだレイアウト</h3><div class="layout-grid">` +
+      `<button type="button" class="layout-btn" data-id="kle" aria-pressed="${state.layoutId === 'kle'}">` +
+      `<span class="layout-name">${name}<small>${state.imported.keys.length}キー（KLE）</small></span></button></div>`
+    );
+  }
+
   function baseLayout() {
-    const layout = layouts.byId[state.layoutId];
+    const layout = currentLayout();
     return layout.variantOf ? layouts.byId[layout.variantOf] : layout;
   }
 
   // Pick the variant of a base layout that matches the preferred key standard.
   function selectLayout(baseId) {
+    if (baseId === 'kle') {
+      state.layoutId = 'kle';
+      return;
+    }
     const base = layouts.byId[baseId];
     state.layoutId = state.std === 'jis' && base.jis ? base.jis : baseId;
   }
@@ -260,6 +296,7 @@
       a: state.autoLegend,
       o: layoutOverrides(),
       s: { src: state.source, b: state.base, h: state.harmony, t: state.tone, p: state.presetId },
+      ...(state.layoutId === 'kle' && state.imported ? { k: kle.pack(state.imported) } : {}),
     };
   }
 
@@ -283,7 +320,8 @@
   // Validate and apply shareData(). Returns false (leaving state untouched) when invalid.
   function applyShared(data) {
     try {
-      const layoutId = layouts.resolveId(data.l);
+      const imported = data.l === 'kle' ? kle.unpack(data.k) : null; // throws on bad data
+      const layoutId = imported ? 'kle' : layouts.resolveId(data.l);
       if (!layoutId || !color.isHex(data.c.case)) return false;
       for (const g of GROUPS) {
         if (!color.isHex(data.c[g].cap) || !color.isHex(data.c[g].legend)) return false;
@@ -291,7 +329,8 @@
       const overrides = {};
       for (const [id, hex] of Object.entries(data.o || {})) if (color.isHex(hex)) overrides[id] = hex;
       state.layoutId = layoutId;
-      state.std = layouts.byId[layoutId].std || 'ansi';
+      if (imported) state.imported = imported;
+      state.std = currentLayout().std || 'ansi';
       state.colors = data.c;
       state.autoLegend = data.a !== false;
       state.overrides[layoutId] = overrides;
@@ -315,13 +354,38 @@
   }
 
   async function copyBom() {
-    const text = bom.bomText(currentBom(), `${layoutTitle(layouts.byId[state.layoutId])} のキーキャップ内訳`);
+    const text = bom.bomText(currentBom(), `${layoutTitle(currentLayout())} のキーキャップ内訳`);
     try {
       await navigator.clipboard.writeText(text);
       toast('キーキャップ内訳をコピーしました');
     } catch {
       window.prompt('この内容をコピーしてください', text);
     }
+  }
+
+  // ---------- KLE import ----------
+
+  function importKle() {
+    $('kle-error').textContent = '';
+    let parsed;
+    try {
+      parsed = kle.parseKle($('kle-text').value);
+    } catch (e) {
+      $('kle-error').textContent = e instanceof kle.KleError ? e.message : 'JSON を読み込めませんでした。';
+      return;
+    }
+    checkpoint();
+    const overrides = {};
+    if ($('kle-colors').checked) {
+      parsed.keys.forEach((k, i) => {
+        if (k.c) overrides[String(i)] = color.rgbToHex(color.hexToRgb(k.c));
+      });
+    }
+    state.imported = { name: parsed.name, keys: parsed.keys.map(({ c, ...key }) => key) };
+    state.layoutId = 'kle';
+    state.overrides.kle = overrides;
+    renderAll();
+    toast(`${parsed.keys.length}キーのレイアウトを読み込みました`);
   }
 
   // ---------- saved designs (this browser only) ----------
@@ -358,7 +422,7 @@
     const stamp = `${now.getMonth() + 1}/${now.getDate()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     list.unshift({
       id: `${now.getTime().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      name: `${layoutTitle(layouts.byId[state.layoutId])} ${stamp}`,
+      name: `${layoutTitle(currentLayout())} ${stamp}`,
       data: JSON.parse(JSON.stringify(shareData())),
     });
     if (writeSaved(list)) {
@@ -621,6 +685,19 @@
     });
 
     $('btn-save').addEventListener('click', saveCurrent);
+
+    $('btn-kle').addEventListener('click', importKle);
+    $('kle-file').addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 1024 * 1024) {
+        $('kle-error').textContent = 'ファイルが大きすぎます（1MBまで）。';
+        return;
+      }
+      $('kle-text').value = await file.text();
+      e.target.value = '';
+      importKle();
+    });
     $('saved').addEventListener('click', onSavedClick);
     $('btn-random').addEventListener('click', () => {
       checkpoint();

@@ -11,6 +11,7 @@
 - `main` へのマージで `.github/workflows/pages.yml` がテスト後に Pages へ自動デプロイする。公開対象は `index.html`・`css/`・`js/` のみ。
 - **元に戻す**: 状態を変える操作は、変更の**前**に `checkpoint(kind)` を呼ぶ。連続して発火する入力（色ピッカーのドラッグなど）は同じ `kind` を渡して1手にまとめる。表示だけの設定（ペイントモード、色覚シミュレーション）は履歴に入れない。
 - **保存**: 保存データは localStorage の `keyboard-color:saved`。読み込み時は共有URLと同じ `applyShared()` で検証し、壊れたデータでもページが動くようにする。
+- **KLE 読み込み**: `js/kle.js` は独自実装。KLE エディタ（ijprest/keyboard-layout-editor）のコードは「All rights reserved」で寛容なライセンスではないため**複製しない**（形式の解釈は MIT の kle-serial と、エディタの挙動に合わせる）。`rx` / `ry` を指定するとカーソルが回転中心へ戻る点はエディタに合わせている（2019 年版 kle-serial とは異なる）。共有 URL・保存データの `k` は `unpack()` で検証してから使う。テストの KLE データは自作し、KLE のサンプルを複製しない。
 - **更新履歴**: 利用者に見える変更（機能・レイアウト・プリセット・表記の追加や変更）は、`js/changelog.js` の先頭に `{ date, title, items }` を追記してから PR を出す。日付はマージ予定日（JST）、文章は利用者向けの日本語で書く。内部だけの変更（テスト・ドキュメント・CI）は載せない。ページ下部には新しい順に3件を表示し、残りは折りたたむ。
 
 ## レイアウト追加のルール
@@ -62,6 +63,7 @@
 
 | 参照名 | 対象 | 権利・ライセンス | 確認状況 | 出典 |
 | --- | --- | --- | --- | --- |
+| keyboard-layout-editor（KLE） | 読み込みに対応したレイアウト形式。リンクと説明文で名前を参照 | エディタ: Copyright (C) 2013-2018 Ian Prest、All rights reserved（寛容なライセンスではない）。ただし作者は利用者のレイアウト（入力）と出力について所有権を主張せず、自由に使ってよいと明記。kle-serial: MIT, Copyright (c) 2013-2019 Ian Prest | 確認済（一次） | [ijprest/keyboard-layout-editor](https://github.com/ijprest/keyboard-layout-editor), [ijprest/kle-serial](https://github.com/ijprest/kle-serial) |
 | Machado 2009 | 色覚シミュレーションの変換行列（重症度1.0の1型・2型・3型） | 論文の数値。照合に使った colour-science のデータセットは BSD-3-Clause | 確認済（二次情報：colour-science 0.4.6 のデータセットで数値を照合。論文のサイトはこの環境から接続不可） | [colour-science](https://github.com/colour-science/colour) |
 
 ### プリセット（`id`）

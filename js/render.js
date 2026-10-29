@@ -3,7 +3,7 @@
   'use strict';
   const KC = (root.KC = root.KC || {});
   const { shade } = KC.color;
-  const { corners } = KC.layouts;
+  const { outline } = KC.layouts;
 
   const U = 56; // px per key unit
   const PAD = 0.4; // case padding in key units
@@ -17,7 +17,7 @@
     const boxes = new Map();
     for (const key of keys) {
       const b = boxes.get(key.part) || { x1: Infinity, y1: Infinity, x2: -Infinity, y2: -Infinity };
-      for (const [x, y] of corners(key)) {
+      for (const [x, y] of outline(key)) {
         b.x1 = Math.min(b.x1, x);
         b.y1 = Math.min(b.y1, y);
         b.x2 = Math.max(b.x2, x);
@@ -78,11 +78,14 @@
       const h = key.h * U;
       const transform = key.rot ? ` transform="rotate(${key.rot} ${px(key.rx)} ${px(key.ry)})"` : '';
       const iso = key.shape === 'iso';
+      // Keys with a second rectangle (KLE x2/w2...) draw both sides first, then both tops,
+      // so the overlapping tops merge into one face.
+      const boxes = [[x, y, w, h], ...(key.sub ? [[px(key.x + key.sub.x), px(key.y + key.sub.y), key.sub.w * U, key.sub.h * U]] : [])];
       const body = iso
         ? lShape(x, y, w, h, 0.25 * U, { l: 2, t: 2, r: 2, b: 2 }, 5, shade(cap, -14)) +
           lShape(x, y, w, h, 0.25 * U, { l: 7, t: 4, r: 7, b: 11 }, 4, cap)
-        : `<rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="7" fill="${shade(cap, -14)}"/>` +
-          `<rect x="${x + 7}" y="${y + 4}" width="${w - 14}" height="${h - 15}" rx="5" fill="${cap}"/>`;
+        : boxes.map(([bx, by, bw, bh]) => `<rect x="${bx + 2}" y="${by + 2}" width="${bw - 4}" height="${bh - 4}" rx="7" fill="${shade(cap, -14)}"/>`).join('') +
+          boxes.map(([bx, by, bw, bh]) => `<rect x="${bx + 7}" y="${by + 4}" width="${bw - 14}" height="${bh - 15}" rx="5" fill="${cap}"/>`).join('');
       const legendY = y + ((iso ? U : h) - 11) / 2 + 4;
       const a11y = interactive ? ` tabindex="0" role="button" aria-label="${esc(key.l)} キーを塗る"` : '';
       parts.push(

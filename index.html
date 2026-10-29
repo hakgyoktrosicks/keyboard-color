@@ -57,6 +57,27 @@
             </div>
           </div>
           <p id="std-note" class="hint" hidden>このレイアウトはANSIのみです。</p>
+          <details class="kle-import">
+            <summary>KLE の JSON からレイアウトを読み込む</summary>
+            <p class="hint">
+              <a href="https://www.keyboard-layout-editor.com/" target="_blank" rel="noopener">keyboard-layout-editor.com</a>
+              の「Raw data」タブの内容を貼り付けるか、「Download JSON」で保存したファイルを選んでください。
+              キーの色分け（アルファ／モディファイア／アクセント）は刻印から自動で判定します。
+            </p>
+            <textarea id="kle-text" rows="5" spellcheck="false" aria-label="KLE の JSON" placeholder='["Esc","1","2","3"],&#10;[{"w":1.5},"Tab","Q","W","E"]'></textarea>
+            <div class="kle-actions">
+              <label class="kle-file">
+                <span>ファイルから</span>
+                <input type="file" id="kle-file" accept=".json,.txt,application/json,text/plain" />
+              </label>
+              <label class="check">
+                <input type="checkbox" id="kle-colors" />
+                <span>KLE のキー色も取り込む</span>
+              </label>
+              <button type="button" id="btn-kle" class="primary">読み込む</button>
+            </div>
+            <p id="kle-error" class="kle-error" role="alert"></p>
+          </details>
         </section>
 
         <section class="panel">
@@ -143,6 +164,7 @@
 
     <script src="js/color.js"></script>
     <script src="js/layouts.js"></script>
+    <script src="js/kle.js"></script>
     <script src="js/palettes.js"></script>
     <script src="js/changelog.js"></script>
     <script src="js/bom.js"></script>

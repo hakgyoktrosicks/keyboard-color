@@ -637,3 +637,53 @@ button:disabled:hover {
   padding: 4px 8px;
   font-size: 0.8rem;
 }
+
+.kle-import {
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+
+.kle-import summary {
+  cursor: pointer;
+}
+
+.kle-import textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  font: 0.8rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.kle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.kle-file {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.kle-file input {
+  max-width: 100%;
+  font-size: 0.8rem;
+}
+
+.kle-error {
+  margin: 8px 0 0;
+  color: var(--bad);
+}
+
+.kle-error:empty {
+  display: none;
+}

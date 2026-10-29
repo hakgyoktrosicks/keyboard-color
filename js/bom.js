@@ -7,13 +7,23 @@
   'use strict';
 
   const L_ENTER = 'L字Enter';
+  const SPECIAL = '特殊形状';
 
   function fmt(n) {
     return `${+n.toFixed(2)}u`;
   }
 
+  function isIsoEnter(key) {
+    if (key.shape === 'iso') return true;
+    // KLE's ISO Enter: a 1.25u x 2u key with a 1.5u x 1u top rectangle shifted 0.25u left.
+    const s = key.sub;
+    return Boolean(s) && key.w === 1.25 && key.h === 2 && s.x === -0.25 && s.y === 0 && s.w === 1.5 && s.h === 1;
+  }
+
   function sizeLabel(key) {
-    if (key.shape === 'iso') return L_ENTER;
+    if (isIsoEnter(key)) return L_ENTER;
+    if (key.sub) return `${SPECIAL}（${fmt(key.w)}×${fmt(key.h)}）`;
+    if (key.h > 1 && key.w > 1) return `${fmt(key.w)}×${fmt(key.h)}`;
     if (key.h > 1) return `${fmt(key.h)}（縦）`;
     return fmt(key.w);
   }
@@ -21,6 +31,7 @@
   // Plain widths first (narrowest first), then vertical keys, then the L-shaped Enter.
   function sizeRank(label) {
     if (label === L_ENTER) return [2, 0];
+    if (label.startsWith(SPECIAL) || label.includes('×')) return [3, 0];
     if (label.endsWith('（縦）')) return [1, parseFloat(label)];
     return [0, parseFloat(label)];
   }
