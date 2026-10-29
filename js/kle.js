@@ -1,4 +1,4 @@
-// Import layouts from keyboard-layout-editor.com (KLE) JSON / raw data.
+// Import and export layouts in keyboard-layout-editor.com (KLE) JSON / raw data.
 // Independent implementation of the KLE layout format (see CLAUDE.md: no KLE editor code is copied).
 (function (root, factory) {
   const api = factory(typeof module === 'object' && module.exports ? require('./layouts.js') : root.KC.layouts);
@@ -206,6 +206,110 @@
     return key;
   }
 
+  // ---- export ----
+
+  const KLE_DEFAULT_CAP = '#cccccc';
+  const KLE_DEFAULT_LEGEND = '#000000';
+  // 6 decimals: enough for rotated layouts (whose origins are irrational after trimming),
+  // while dropping floating-point noise such as 0.30000000000000004.
+  const round6 = (v) => Math.round(v * 1e6) / 1e6;
+
+  // KLE renders legends as HTML.
+  function encodeLabel(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // KLE geometry of a key. Our L-shaped Enter (`shape: 'iso'`, anchored at its wide top row)
+  // becomes KLE's form: the tall 1.25u part plus a 1.5u second rectangle shifted 0.25u left.
+  function kleGeometry(key) {
+    if (key.shape === 'iso') {
+      return { x: key.x + 0.25, y: key.y, w: key.w - 0.25, h: key.h, sub: { x: -0.25, y: 0, w: key.w, h: 1 } };
+    }
+    return { x: key.x, y: key.y, w: key.w, h: key.h, sub: key.sub || null };
+  }
+
+  // Build KLE rows for a layout. This is the inverse of parseKle(): it replays the same
+  // cursor rules (rows advance y by 1 and reset x to rx; setting rx/ry moves the cursor to
+  // the rotation origin; w/h reset after each key; c/t colours are sticky).
+  // colorsFor(key) -> { cap, legend }.
+  function serialize(layout, { name = '', caseColor = null, colorsFor }) {
+    const items = layout.keys.map((key) => {
+      const { cap, legend } = colorsFor(key);
+      return {
+        ...kleGeometry(key),
+        r: round6(key.rot || 0),
+        rx: key.rot ? round6(key.rx) : 0,
+        ry: key.rot ? round6(key.ry) : 0,
+        l: key.l,
+        cap,
+        legend,
+      };
+    });
+    const clusterId = (k) => `${k.r}|${k.rx}|${k.ry}`;
+    const clusterOrder = [...new Set(items.map(clusterId))];
+    items.sort(
+      (a, b) => clusterOrder.indexOf(clusterId(a)) - clusterOrder.indexOf(clusterId(b)) || round6(a.y) - round6(b.y) || a.x - b.x
+    );
+
+    const meta = { backcolor: caseColor || undefined, name: name || undefined, notes: 'Keyboard Color Lab で作成' };
+    const rows = [JSON.parse(JSON.stringify(meta))];
+    const cur = { x: 0, y: 0, r: 0, rx: 0, ry: 0, c: KLE_DEFAULT_CAP, t: KLE_DEFAULT_LEGEND };
+    let row = null;
+    let rowKey = null;
+
+    for (const k of items) {
+      const key = `${clusterId(k)}|${round6(k.y)}`;
+      const props = {};
+      if (key !== rowKey) {
+        if (row) {
+          rows.push(row);
+          cur.y += 1;
+          cur.x = cur.rx;
+        }
+        row = [];
+        rowKey = key;
+        if (k.r !== cur.r) props.r = cur.r = k.r;
+        if (k.rx !== cur.rx || k.ry !== cur.ry) {
+          props.rx = cur.rx = k.rx;
+          props.ry = cur.ry = k.ry;
+          cur.x = k.rx;
+          cur.y = k.ry;
+        }
+        const dy = round6(k.y - cur.y);
+        if (dy) props.y = dy;
+        cur.y += dy;
+      }
+      const dx = round6(k.x - cur.x);
+      if (dx) props.x = dx;
+      cur.x += dx;
+      if (k.cap !== cur.c) props.c = cur.c = k.cap;
+      if (k.legend !== cur.t) props.t = cur.t = k.legend;
+      if (k.w !== 1) props.w = round6(k.w);
+      if (k.h !== 1) props.h = round6(k.h);
+      if (k.sub) {
+        if (k.sub.x) props.x2 = round6(k.sub.x);
+        if (k.sub.y) props.y2 = round6(k.sub.y);
+        if (k.sub.w !== k.w) props.w2 = round6(k.sub.w);
+        if (k.sub.h !== k.h) props.h2 = round6(k.sub.h);
+      }
+      if (Object.keys(props).length) row.push(props);
+      row.push(encodeLabel(k.l));
+      cur.x += round6(k.w);
+    }
+    if (row) rows.push(row);
+    return rows;
+  }
+
+  // For KLE's "Upload JSON" (or "Download JSON" format).
+  function toJson(rows) {
+    return `[\n${rows.map((r) => JSON.stringify(r)).join(',\n')}\n]\n`;
+  }
+
+  // For KLE's "Raw data" tab, which adds the outer brackets itself.
+  function toRawData(rows) {
+    return rows.map((r) => JSON.stringify(r)).join(',\n');
+  }
+
   // ---- compact form for share URLs and saved designs ----
 
   const GROUP_CODES = { alpha: 'a', mod: 'm', accent: 'x' };
@@ -255,5 +359,5 @@
     return { name: typeof data.n === 'string' ? data.n.slice(0, 60) : '', keys };
   }
 
-  return { parseKle, pack, unpack, relaxedToJson, KleError };
+  return { parseKle, serialize, toJson, toRawData, pack, unpack, relaxedToJson, KleError };
 });

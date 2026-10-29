@@ -55,7 +55,8 @@ async function setup() {
 }
 
 // Helpers that read app state from the page.
-const shareState = (page) => page.evaluate(() => JSON.parse(atob(location.hash.slice(1))));
+const shareState = (page) =>
+  page.evaluate(() => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(location.hash.slice(1)), (c) => c.charCodeAt(0)))));
 const keyFill = (page, id) => page.$eval(`#preview .key[data-id="${id}"] rect:nth-of-type(2)`, (el) => el.getAttribute('fill'));
 const bomTotal = (page) => page.$$eval('.bom-total', (xs) => xs.reduce((n, x) => n + parseInt(x.textContent, 10), 0));
 const pressedLayout = (page) => page.$eval('.layout-btn[aria-pressed="true"]', (x) => x.dataset.id);

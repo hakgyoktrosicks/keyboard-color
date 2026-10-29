@@ -314,8 +314,17 @@
     };
   }
 
+  // Base64 of the UTF-8 JSON. btoa() alone only takes Latin-1, and imported KLE layouts can
+  // carry Japanese names and legends. ASCII-only URLs made before this decode the same way.
   function encodeState() {
-    return btoa(JSON.stringify(shareData()));
+    let binary = '';
+    for (const byte of new TextEncoder().encode(JSON.stringify(shareData()))) binary += String.fromCharCode(byte);
+    return btoa(binary);
+  }
+
+  function decodeState(hash) {
+    const bytes = Uint8Array.from(atob(hash), (c) => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
   }
 
   function saveHash() {
@@ -325,7 +334,7 @@
   function loadHash() {
     if (location.hash.length < 2) return false;
     try {
-      return applyShared(JSON.parse(atob(location.hash.slice(1))));
+      return applyShared(decodeState(location.hash.slice(1)));
     } catch {
       return false;
     }
@@ -406,6 +415,40 @@
     state.overrides.kle = overrides;
     renderAll();
     toast(`${parsed.keys.length}キーのレイアウトを読み込みました`);
+  }
+
+  function kleRows() {
+    return kle.serialize(currentLayout(), {
+      name: layoutTitle(currentLayout()),
+      caseColor: state.colors.case,
+      colorsFor,
+    });
+  }
+
+  function exportKleRaw() {
+    $('kle-out').value = kle.toRawData(kleRows());
+    $('kle-out-wrap').hidden = false;
+    $('kle-out').select();
+    toast('KLE の Raw data を作りました');
+  }
+
+  async function copyKleRaw() {
+    try {
+      await navigator.clipboard.writeText($('kle-out').value);
+      toast('Raw data をコピーしました');
+    } catch {
+      $('kle-out').select();
+      toast('コピーできませんでした。選択された文字列を手動でコピーしてください');
+    }
+  }
+
+  function exportKleJson() {
+    const blob = new Blob([kle.toJson(kleRows())], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `keyboard-${state.layoutId}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   // ---------- saved designs (this browser only) ----------
@@ -724,6 +767,9 @@
     $('btn-save').addEventListener('click', saveCurrent);
 
     $('btn-kle').addEventListener('click', importKle);
+    $('btn-kle-raw').addEventListener('click', exportKleRaw);
+    $('btn-kle-copy').addEventListener('click', copyKleRaw);
+    $('btn-kle-json').addEventListener('click', exportKleJson);
     $('kle-file').addEventListener('change', async (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;

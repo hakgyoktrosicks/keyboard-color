@@ -199,3 +199,48 @@ test('colour vision simulation changes the preview only', async () => {
   assert.equal(await page.$eval('#btn-undo', (b) => b.disabled), true, 'not an undoable change');
   assert.deepEqual(page.errors, []);
 });
+
+test('KLE export: Raw data re-imports to the same layout and colours; JSON downloads', async () => {
+  const page = await env.page();
+  await page.click('.layout-btn[data-id="60"]');
+  await page.click('#std-toggle [data-std="jis"]');
+  await page.selectOption('#key-tool', 'accent');
+  await page.click('#preview .key[data-id="1"]');
+  await page.selectOption('#key-tool', 'paint');
+  await page.fill('#paint', '#00aa55');
+  await page.click('#preview .key[data-id="2"]');
+  const keyCount = await page.locator('#preview .key').count();
+  // The keycap's top face is the last shape drawn (an L-shaped Enter is 2 polygons in our
+  // layouts but 4 rects after a KLE round trip).
+  const topFaces = () =>
+    page.$$eval('#preview .key', (keys) => keys.map((k) => [k.textContent, [...k.querySelectorAll('rect, polygon')].pop().getAttribute('fill')]));
+  const fills = await topFaces();
+
+  await page.click('.kle-import summary');
+  await page.click('#btn-kle-raw');
+  const raw = await page.$eval('#kle-out', (x) => x.value);
+  assert.match(raw, /"name":"60%（JIS）"/);
+
+  await page.fill('#kle-text', raw);
+  await page.check('#kle-colors');
+  await page.click('#btn-kle');
+  assert.equal(await pressedLayout(page), 'kle');
+  assert.equal(await page.locator('#preview .key').count(), keyCount);
+  const reimported = await topFaces();
+  assert.deepEqual(reimported.sort(), fills.sort(), 'same legends and keycap colours');
+  assert.equal(await page.$$eval('.bom-sizes', (xs) => xs.some((x) => x.textContent.includes('L字Enter'))), true);
+
+  // Regression: Japanese names / legends used to break the share URL (btoa is Latin-1 only).
+  const shared = await env.page({ hash: await page.evaluate(() => location.hash.slice(1)) });
+  assert.equal(await pressedLayout(shared), 'kle');
+  assert.equal(await shared.locator('#preview .key').count(), keyCount);
+  assert.match(await shared.$eval('.layout-btn[data-id="kle"]', (x) => x.textContent), /60%（JIS）/);
+  assert.deepEqual(shared.errors, []);
+
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btn-kle-json')]);
+  const fs = require('node:fs');
+  const json = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+  assert.ok(Array.isArray(json) && json.length > 1);
+  assert.equal(json[0].notes, 'Keyboard Color Lab で作成');
+  assert.deepEqual(page.errors, []);
+});

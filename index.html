@@ -58,7 +58,8 @@
           </div>
           <p id="std-note" class="hint" hidden>このレイアウトはANSIのみです。</p>
           <details class="kle-import">
-            <summary>KLE の JSON からレイアウトを読み込む</summary>
+            <summary>KLE（keyboard-layout-editor）の読み込み・書き出し</summary>
+            <h3 class="kle-sub">読み込み</h3>
             <p class="hint">
               <a href="https://www.keyboard-layout-editor.com/" target="_blank" rel="noopener">keyboard-layout-editor.com</a>
               の「Raw data」タブの内容を貼り付けるか、「Download JSON」で保存したファイルを選んでください。
@@ -77,6 +78,19 @@
               <button type="button" id="btn-kle" class="primary">読み込む</button>
             </div>
             <p id="kle-error" class="kle-error" role="alert"></p>
+            <h3 class="kle-sub">書き出し</h3>
+            <p class="hint">
+              今のレイアウトと配色を KLE 形式で書き出します。キーキャップ色は <code>c</code>、刻印色は <code>t</code>、ケース色は背景色（<code>backcolor</code>）になります。
+              Raw data は KLE の「Raw data」タブに貼り付け、JSON は「Upload JSON」で読み込んでください。
+            </p>
+            <div class="kle-actions">
+              <button type="button" id="btn-kle-raw">Raw data を作る</button>
+              <button type="button" id="btn-kle-json">JSON を保存</button>
+            </div>
+            <div id="kle-out-wrap" hidden>
+              <textarea id="kle-out" rows="5" readonly spellcheck="false" aria-label="書き出した KLE の Raw data"></textarea>
+              <button type="button" id="btn-kle-copy">コピー</button>
+            </div>
           </details>
         </section>
 
