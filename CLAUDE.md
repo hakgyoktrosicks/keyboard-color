@@ -11,6 +11,7 @@
 - CI: `.github/workflows/ci.yml` が PR ごとに単体テストとブラウザテストを実行する。`pages.yml` は同じワークフローを呼び出し、両方が通ったときだけデプロイする。CI の Playwright は `ci.yml` で `playwright@1.63.0` に固定している（ローカル環境の版に合わせる）。
 - `main` へのマージで `.github/workflows/pages.yml` がテスト後に Pages へ自動デプロイする。公開対象は `index.html`・`css/`・`js/` のみ。
 - **キーごとの設定**: `state.groups[layoutId][keyId]` はキーのグループ付け替え（配色に追従）、`state.overrides` は色の固定（追従しない）。色の計算は必ず `groupOf(key)` を通す。
+- **ランダムの固定**: `state.locks` は「ランダム」だけに効く表示上の設定（元に戻す・共有 URL・保存には含めない）。配色ルールやプリセットを選び直したときは固定より選んだ配色を優先する。固定した色を残した結果は配色ルールどおりではないので `source` を `'custom'` にする。
 - **元に戻す**: 状態を変える操作は、変更の**前**に `checkpoint(kind)` を呼ぶ。連続して発火する入力（色ピッカーのドラッグなど）は同じ `kind` を渡して1手にまとめる。表示だけの設定（ペイントモード、色覚シミュレーション）は履歴に入れない。
 - **共有 URL**: `js/share.js` が符号化する。新形式は `z.` ＋ base64url(deflate-raw(UTF-8 の JSON))（ブラウザ標準の `CompressionStream`）。旧形式（UTF-8 JSON の素の Base64。必ず `ey` で始まる）も読めるよう残すこと（既に配った URL がある）。展開後の上限は `MAX_BYTES`（圧縮爆弾対策）。符号化は非同期なので、`saveHash()` は最後の書き込みだけを URL に反映し、テストは `KC.share.pending` を待ってから URL を読む。初期化完了で `<html data-ready>` が付く。`btoa()` に文字列を直接渡さない（日本語で例外になる）。
 - **保存**: 保存データは localStorage の `keyboard-color:saved`。読み込み時は共有URLと同じ `applyShared()` で検証し、壊れたデータでもページが動くようにする。

@@ -24,6 +24,8 @@
     paint: '#e4572e',
     cvd: '', // colour vision simulation for the preview only ('' = off)
     imported: null, // layout imported from KLE: { name, keys } (shown as layout id 'kle')
+    // Colors the 「ランダム」 button keeps. A view preference: not in undo, share URLs or saves.
+    locks: { case: false, alpha: false, mod: false, accent: false },
   };
 
   // State that undo / redo and saved designs restore. View-only settings (paint mode,
@@ -213,10 +215,20 @@
     return `<span class="badge ${level === 'NG' ? 'bad' : ''}" title="刻印とキーキャップのコントラスト比">${ratio.toFixed(1)}:1 ${level}</span>`;
   }
 
+  function lockButton(role, label) {
+    const locked = state.locks[role];
+    return (
+      `<button type="button" class="lock" data-lock="${role}" aria-pressed="${locked}" ` +
+      `aria-label="${label}の色をランダムで変えない" title="${locked ? 'ランダムでも変えない（固定中）' : 'ランダムで変わる'}">${locked ? '🔒' : '🔓'}</button>`
+    );
+  }
+
   function renderTuning() {
     const rows = [
       `<div class="tune-row"><span class="tune-label">ケース</span>` +
-        `<input type="color" data-role="case" value="${state.colors.case}" aria-label="ケースの色"></div>`,
+        `<input type="color" data-role="case" value="${state.colors.case}" aria-label="ケースの色">` +
+        lockButton('case', 'ケース') +
+        `</div>`,
       ...GROUPS.map((g) => {
         const cap = state.colors[g].cap;
         const legend = legendFor(g);
@@ -225,6 +237,7 @@
           `<input type="color" data-role="${g}" data-part="cap" value="${cap}" aria-label="${GROUP_LABELS[g]}のキーキャップ色">` +
           `<input type="color" data-role="${g}" data-part="legend" value="${legend}" aria-label="${GROUP_LABELS[g]}の刻印色" ${state.autoLegend ? 'disabled' : ''}>` +
           contrastBadge(cap, legend) +
+          lockButton(g, GROUP_LABELS[g]) +
           `</div>`
         );
       }),
@@ -292,12 +305,23 @@
     renderAll();
   }
 
+  const lockedRoles = () => Object.keys(state.locks).filter((role) => state.locks[role]);
+  const allLocked = () => lockedRoles().length === Object.keys(state.locks).length;
+
+  // New random palette; locked roles keep their current cap (and legend) colors.
   function randomize() {
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const kept = JSON.parse(JSON.stringify(state.colors));
     state.base = color.hslToHex({ h: Math.random() * 360, s: 45 + Math.random() * 35, l: 50 });
     state.harmony = pick(Object.keys(color.HARMONIES));
     state.tone = pick(Object.keys(color.TONES));
-    generate();
+    state.source = 'harmony';
+    applyRoles(color.generatePalette(state.base, state.harmony, state.tone));
+    const locked = lockedRoles();
+    for (const role of locked) state.colors[role] = kept[role];
+    // Locked colors are not part of the generated palette, so it is no longer a pure rule result.
+    if (locked.length) state.source = 'custom';
+    renderAll();
   }
 
   // ---------- share / export ----------
@@ -782,8 +806,20 @@
     });
     $('saved').addEventListener('click', onSavedClick);
     $('btn-random').addEventListener('click', () => {
+      if (allLocked()) {
+        toast('すべての色が固定されています。🔒 を押して解除してください');
+        return;
+      }
       checkpoint();
       randomize();
+    });
+
+    $('tuning').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-lock]');
+      if (!btn) return;
+      state.locks[btn.dataset.lock] = !state.locks[btn.dataset.lock];
+      renderTuning();
+      $('tuning').querySelector(`[data-lock="${btn.dataset.lock}"]`).focus();
     });
     $('btn-share').addEventListener('click', share);
     $('btn-png').addEventListener('click', exportPng);
