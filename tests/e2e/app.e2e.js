@@ -281,3 +281,44 @@ test('share URLs are compressed and URL-safe; old uncompressed links still open'
   assert.match(await broken.$eval('#toast', (x) => x.textContent), /読み込めませんでした/);
   assert.deepEqual([...page.errors, ...oldPage.errors, ...broken.errors], []);
 });
+
+test('locked colors survive the random button; unlocked ones change', async () => {
+  const page = await env.page();
+  const cap = (role) => inputValue(page, role === 'case' ? '[data-role="case"]' : `[data-role="${role}"][data-part="cap"]`);
+  const alpha = await cap('alpha');
+  const accent = await cap('accent');
+  await page.click('[data-lock="alpha"]');
+  await page.click('[data-lock="accent"]');
+  assert.equal(await page.$eval('[data-lock="alpha"]', (b) => b.getAttribute('aria-pressed')), 'true');
+
+  const mods = new Set();
+  for (let i = 0; i < 5; i++) {
+    await page.click('#btn-random');
+    assert.equal(await cap('alpha'), alpha, 'locked alpha kept');
+    assert.equal(await cap('accent'), accent, 'locked accent kept');
+    mods.add(await cap('mod'));
+  }
+  assert.ok(mods.size > 1, 'the unlocked modifier color changes');
+  // Locked colors are not part of the generated rule any more, so the UI says it is custom.
+  assert.equal(await page.isVisible('#source-note'), true);
+
+  // Each random press is one undo step.
+  const modNow = await cap('mod');
+  await page.click('#btn-random');
+  await page.click('#btn-undo');
+  assert.equal(await cap('mod'), modNow);
+
+  // Everything locked: nothing changes, and the toast says why.
+  await page.click('[data-lock="case"]');
+  await page.click('[data-lock="mod"]');
+  const before = await Promise.all(['case', 'alpha', 'mod', 'accent'].map(cap));
+  await page.click('#btn-random');
+  assert.deepEqual(await Promise.all(['case', 'alpha', 'mod', 'accent'].map(cap)), before);
+  assert.match(await page.$eval('#toast', (x) => x.textContent), /固定/);
+
+  // Unlocking brings back normal behaviour.
+  await page.click('[data-lock="alpha"]');
+  await page.click('#btn-random');
+  assert.notEqual(await cap('alpha'), alpha);
+  assert.deepEqual(page.errors, []);
+});
