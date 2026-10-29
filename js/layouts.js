@@ -8,11 +8,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const ACCENT_LABELS = new Set(['Esc', 'Enter']);
+  const ACCENT_LABELS = new Set(['esc', 'escape', 'enter', 'return']);
   const ALPHA_RE = /^[A-Z0-9`\-=[\]\\;',./*+^@:¥]$/;
 
   function inferGroup(label) {
-    if (ACCENT_LABELS.has(label)) return 'accent';
+    if (ACCENT_LABELS.has(label.toLowerCase())) return 'accent';
     if (ALPHA_RE.test(label)) return 'alpha';
     return 'mod';
   }
@@ -37,7 +37,19 @@
         { x: key.x + 0.25, y: key.y + 1, w: key.w - 0.25, h: key.h - 1, ...rot },
       ];
     }
+    // A second rectangle (from KLE x2/y2/w2/h2), offset from the key's position.
+    if (key.sub) {
+      return [
+        { x: key.x, y: key.y, w: key.w, h: key.h, ...rot },
+        { x: key.x + key.sub.x, y: key.y + key.sub.y, w: key.sub.w, h: key.sub.h, ...rot },
+      ];
+    }
     return [{ x: key.x, y: key.y, w: key.w, h: key.h, ...rot }];
+  }
+
+  // Every corner of every rectangle of a key, rotation applied.
+  function outline(key) {
+    return rects(key).flatMap(corners);
   }
 
   // Four corners of a key in layout units, with rotation applied.
@@ -362,12 +374,13 @@
   ]);
 
   // Shift rotated layouts back into positive space and compute their bounds.
-  function finalize(def) {
+  // `trim` also removes empty space above / left of the keys (used for imported layouts).
+  function finalize(def, { trim = false } = {}) {
     let keys = def.keys.map((key, i) => ({ ...key, id: String(i) }));
-    const pts = keys.flatMap(corners);
-    const minX = Math.min(0, ...pts.map((p) => p[0]));
-    const minY = Math.min(0, ...pts.map((p) => p[1]));
-    if (minX < 0 || minY < 0) {
+    const pts = keys.flatMap(outline);
+    const minX = trim ? Math.min(...pts.map((p) => p[0])) : Math.min(0, ...pts.map((p) => p[0]));
+    const minY = trim ? Math.min(...pts.map((p) => p[1])) : Math.min(0, ...pts.map((p) => p[1]));
+    if (minX !== 0 || minY !== 0) {
       keys = keys.map((key) => ({
         ...key,
         x: key.x - minX,
@@ -375,11 +388,45 @@
         ...(key.rot ? { rx: key.rx - minX, ry: key.ry - minY } : {}),
       }));
     }
-    const all = keys.flatMap(corners);
+    const all = keys.flatMap(outline);
     const round = (v) => Math.round(v * 1e6) / 1e6;
     const width = round(Math.max(...all.map((p) => p[0])));
     const height = round(Math.max(...all.map((p) => p[1])));
     return { ...def, keys, width, height };
+  }
+
+  // Keys whose outlines come within `gap` units of each other share a case (`part`);
+  // a split board drawn as one layout gets one case per half.
+  function assignParts(keys, gap = 0.75) {
+    const boxes = keys.map((key) => {
+      const pts = outline(key);
+      return {
+        x1: Math.min(...pts.map((p) => p[0])) - gap / 2,
+        y1: Math.min(...pts.map((p) => p[1])) - gap / 2,
+        x2: Math.max(...pts.map((p) => p[0])) + gap / 2,
+        y2: Math.max(...pts.map((p) => p[1])) + gap / 2,
+      };
+    });
+    const parent = keys.map((_, i) => i);
+    const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    for (let i = 0; i < keys.length; i++) {
+      for (let j = i + 1; j < keys.length; j++) {
+        const a = boxes[i];
+        const b = boxes[j];
+        if (a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2) parent[find(i)] = find(j);
+      }
+    }
+    const ids = new Map();
+    return keys.map((key, i) => {
+      const root = find(i);
+      if (!ids.has(root)) ids.set(root, ids.size);
+      return { ...key, part: ids.get(root) };
+    });
+  }
+
+  // Build a layout from imported keys (e.g. KLE): split into cases and move to the origin.
+  function buildLayout({ id, name, desc, keys }) {
+    return finalize({ id, cat: 'custom', name, desc, keys: assignParts(keys) }, { trim: true });
   }
 
   const CATEGORIES = [
@@ -428,5 +475,5 @@
   const ALIASES = { corne: 'split42', lily58: 'split58', planck: 'ortho4x12' };
   const resolveId = (id) => (byId[id] ? id : ALIASES[id] && byId[ALIASES[id]] ? ALIASES[id] : null);
 
-  return { list, byId, CATEGORIES, corners, rects, inferGroup, resolveId };
+  return { list, byId, CATEGORIES, corners, rects, outline, inferGroup, resolveId, buildLayout };
 });
