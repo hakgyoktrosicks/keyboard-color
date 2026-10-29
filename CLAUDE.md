@@ -6,9 +6,11 @@
 
 - ビルド不要の静的サイト（`index.html` / `css/` / `js/`）。外部ライブラリ・CDN は使わない。
 - `js/*.js` は UMD 形式。ブラウザでは `window.KC` に登録し、Node（テスト）では `require` で読み込む。`index.html` を `file://` で直接開いても動くよう ES Modules は使わない。
-- テスト: `npm test`（Node 組み込みテストランナー）。変更後は必ず実行する。
-- UI を変えたら Playwright（環境に導入済み）で表示確認する: コンソールエラーがないこと、390px 幅で横スクロールが出ないこと。
+- テスト: `npm test`（単体テスト）と `npm run test:e2e`（Playwright によるブラウザテスト。`tests/e2e/`）。変更後は両方実行する。
+- UI の機能を追加・変更したら、`tests/e2e/app.e2e.js` にその操作のテストを足す。その場限りの確認スクリプトで済ませない。テストを足したら、機能をわざと壊して失敗することも確かめる。
+- CI: `.github/workflows/ci.yml` が PR ごとに単体テストとブラウザテストを実行する。`pages.yml` は同じワークフローを呼び出し、両方が通ったときだけデプロイする。CI の Playwright は `ci.yml` で `playwright@1.63.0` に固定している（ローカル環境の版に合わせる）。
 - `main` へのマージで `.github/workflows/pages.yml` がテスト後に Pages へ自動デプロイする。公開対象は `index.html`・`css/`・`js/` のみ。
+- **キーごとの設定**: `state.groups[layoutId][keyId]` はキーのグループ付け替え（配色に追従）、`state.overrides` は色の固定（追従しない）。色の計算は必ず `groupOf(key)` を通す。
 - **元に戻す**: 状態を変える操作は、変更の**前**に `checkpoint(kind)` を呼ぶ。連続して発火する入力（色ピッカーのドラッグなど）は同じ `kind` を渡して1手にまとめる。表示だけの設定（ペイントモード、色覚シミュレーション）は履歴に入れない。
 - **保存**: 保存データは localStorage の `keyboard-color:saved`。読み込み時は共有URLと同じ `applyShared()` で検証し、壊れたデータでもページが動くようにする。
 - **KLE 読み込み**: `js/kle.js` は独自実装。KLE エディタ（ijprest/keyboard-layout-editor）のコードは「All rights reserved」で寛容なライセンスではないため**複製しない**（形式の解釈は MIT の kle-serial と、エディタの挙動に合わせる）。`rx` / `ry` を指定するとカーソルが回転中心へ戻る点はエディタに合わせている（2019 年版 kle-serial とは異なる）。共有 URL・保存データの `k` は `unpack()` で検証してから使う。テストの KLE データは自作し、KLE のサンプルを複製しない。

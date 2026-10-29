@@ -18,7 +18,8 @@
     autoLegend: true,
     colors: null, // { case, alpha: { cap, legend }, mod: {...}, accent: {...} }
     overrides: {}, // { [layoutId]: { [keyId]: capHex } }
-    paintMode: false,
+    tool: '', // what clicking a key does: '' (nothing), 'paint', or a group id to move it to
+    groups: {}, // { [layoutId]: { [keyId]: group } } keys moved to another color group
     paint: '#e4572e',
     cvd: '', // colour vision simulation for the preview only ('' = off)
     imported: null, // layout imported from KLE: { name, keys } (shown as layout id 'kle')
@@ -26,7 +27,7 @@
 
   // State that undo / redo and saved designs restore. View-only settings (paint mode,
   // simulation) are left out on purpose.
-  const UNDOABLE = ['layoutId', 'std', 'source', 'base', 'harmony', 'tone', 'presetId', 'autoLegend', 'colors', 'overrides', 'imported'];
+  const UNDOABLE = ['layoutId', 'std', 'source', 'base', 'harmony', 'tone', 'presetId', 'autoLegend', 'colors', 'overrides', 'imported', 'groups'];
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -65,11 +66,23 @@
     return (state.overrides[state.layoutId] ||= {});
   }
 
+  function layoutGroups() {
+    return (state.groups[state.layoutId] ||= {});
+  }
+
+  // A key's color group: the user's reassignment, else the one inferred from its legend.
+  function groupOf(key) {
+    return layoutGroups()[key.id] || key.g;
+  }
+
   function colorsFor(key) {
     const cap = layoutOverrides()[key.id];
     if (cap) return { cap, legend: color.autoLegend(cap) };
-    return { cap: state.colors[key.g].cap, legend: legendFor(key.g) };
+    const g = groupOf(key);
+    return { cap: state.colors[g].cap, legend: legendFor(g) };
   }
+
+  const TOOL_ACTIONS = { paint: '塗る', alpha: 'アルファにする', mod: 'モディファイアにする', accent: 'アクセントにする' };
 
   // Actual colors: used for PNG export and the keycap breakdown.
   function currentSvg() {
@@ -83,14 +96,14 @@
       const { cap, legend } = colorsFor(key);
       return { cap: sim(cap), legend: sim(legend) };
     };
-    return renderKeyboard(currentLayout(), sim(state.colors.case), simColorsFor, { interactive: state.paintMode });
+    return renderKeyboard(currentLayout(), sim(state.colors.case), simColorsFor, { interactive: TOOL_ACTIONS[state.tool] || false });
   }
 
   // ---------- rendering ----------
 
   function renderPreview() {
     $('preview').innerHTML = previewSvg();
-    $('preview').classList.toggle('painting', state.paintMode);
+    $('preview').classList.toggle('painting', Boolean(state.tool));
     $('cvd-note').hidden = !state.cvd;
     renderBom();
   }
@@ -118,7 +131,7 @@
   function renderRatio() {
     const keys = currentLayout().keys;
     const counts = { alpha: 0, mod: 0, accent: 0 };
-    for (const key of keys) counts[key.g]++;
+    for (const key of keys) counts[groupOf(key)]++;
     $('ratio').innerHTML =
       `<span class="ratio-total">${keys.length}キー</span>` +
       GROUPS.map((g) => {
@@ -295,6 +308,7 @@
       c: state.colors,
       a: state.autoLegend,
       o: layoutOverrides(),
+      gr: layoutGroups(),
       s: { src: state.source, b: state.base, h: state.harmony, t: state.tone, p: state.presetId },
       ...(state.layoutId === 'kle' && state.imported ? { k: kle.pack(state.imported) } : {}),
     };
@@ -334,6 +348,12 @@
       state.colors = data.c;
       state.autoLegend = data.a !== false;
       state.overrides[layoutId] = overrides;
+      const keyCount = currentLayout().keys.length;
+      const groups = {};
+      for (const [id, g] of Object.entries(data.gr || {})) {
+        if (/^\d+$/.test(id) && Number(id) < keyCount && GROUPS.includes(g)) groups[id] = g;
+      }
+      state.groups[layoutId] = groups;
       restoreSource(data.s);
       return true;
     } catch {
@@ -628,18 +648,34 @@
       renderAll();
     });
 
-    $('paint-mode').addEventListener('change', (e) => {
-      state.paintMode = e.target.checked;
+    $('key-tool').addEventListener('change', (e) => {
+      state.tool = e.target.value;
+      $('paint-row').hidden = state.tool !== 'paint';
       renderPreview();
     });
     $('paint').addEventListener('input', (e) => (state.paint = e.target.value));
 
-    // Paint (or un-paint) one key, then keep keyboard focus on it across the re-render.
-    function paintKey(id) {
-      checkpoint();
-      const overrides = layoutOverrides();
-      if (overrides[id] === state.paint) delete overrides[id];
-      else overrides[id] = state.paint;
+    // Apply the selected tool to one key, then keep keyboard focus on it across the re-render.
+    // Repeating the same action on a key undoes it.
+    function applyTool(id) {
+      const key = currentLayout().keys.find((k) => k.id === id);
+      if (!key) return;
+      if (state.tool === 'paint') {
+        checkpoint();
+        const overrides = layoutOverrides();
+        if (overrides[id] === state.paint) delete overrides[id];
+        else overrides[id] = state.paint;
+      } else if (GROUPS.includes(state.tool)) {
+        const groups = layoutGroups();
+        const next = groupOf(key) === state.tool ? key.g : state.tool;
+        if (next === groupOf(key)) return; // already in that group by default
+        checkpoint();
+        if (next === key.g) delete groups[id];
+        else groups[id] = next;
+        renderRatio();
+      } else {
+        return;
+      }
       renderPreview();
       saveHash();
       const again = $('preview').querySelector(`.key[data-id="${id}"]`);
@@ -647,24 +683,25 @@
     }
 
     $('preview').addEventListener('click', (e) => {
-      if (!state.paintMode) return;
       const keyEl = e.target.closest('.key');
-      if (keyEl) paintKey(keyEl.dataset.id);
+      if (keyEl) applyTool(keyEl.dataset.id);
     });
 
     $('preview').addEventListener('keydown', (e) => {
-      if (!state.paintMode || (e.key !== 'Enter' && e.key !== ' ')) return;
-      const keyEl = e.target.closest('.key');
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const keyEl = e.target.closest('.key[tabindex]');
       if (!keyEl) return;
       e.preventDefault();
-      paintKey(keyEl.dataset.id);
+      applyTool(keyEl.dataset.id);
     });
 
     $('btn-clear').addEventListener('click', () => {
-      if (!Object.keys(layoutOverrides()).length) return;
+      if (!Object.keys(layoutOverrides()).length && !Object.keys(layoutGroups()).length) return;
       checkpoint();
       state.overrides[state.layoutId] = {};
+      state.groups[state.layoutId] = {};
       renderPreview();
+      renderRatio();
       saveHash();
     });
 

@@ -52,8 +52,8 @@
     );
   }
 
-  // colorsFor(key) -> { cap, legend }. With `interactive`, keys are focusable buttons
-  // (used while painting so keys can be reached with Tab and painted with Enter/Space).
+  // colorsFor(key) -> { cap, legend }. With `interactive` (the action text, e.g. '塗る'),
+  // keys are focusable buttons so they can be reached with Tab and used with Enter/Space.
   function renderKeyboard(layout, caseColor, colorsFor, { interactive = false } = {}) {
     const width = (layout.width + PAD * 2) * U;
     const height = (layout.height + PAD * 2) * U;
@@ -87,7 +87,7 @@
         : boxes.map(([bx, by, bw, bh]) => `<rect x="${bx + 2}" y="${by + 2}" width="${bw - 4}" height="${bh - 4}" rx="7" fill="${shade(cap, -14)}"/>`).join('') +
           boxes.map(([bx, by, bw, bh]) => `<rect x="${bx + 7}" y="${by + 4}" width="${bw - 14}" height="${bh - 15}" rx="5" fill="${cap}"/>`).join('');
       const legendY = y + ((iso ? U : h) - 11) / 2 + 4;
-      const a11y = interactive ? ` tabindex="0" role="button" aria-label="${esc(key.l)} キーを塗る"` : '';
+      const a11y = interactive ? ` tabindex="0" role="button" aria-label="${esc(key.l || '無刻印')} キーを${esc(interactive)}"` : '';
       parts.push(
         `<g class="key" data-id="${key.id}"${transform}${a11y}>` +
           body +

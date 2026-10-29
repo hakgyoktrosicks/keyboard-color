@@ -687,3 +687,7 @@ button:disabled:hover {
 .kle-error:empty {
   display: none;
 }
+
+.paint-row[hidden] {
+  display: none;
+}

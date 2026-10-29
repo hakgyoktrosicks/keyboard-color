@@ -121,16 +121,26 @@
         </section>
 
         <section class="panel">
-          <h2>個別ペイント</h2>
-          <div class="paint-row">
-            <label class="check">
-              <input type="checkbox" id="paint-mode" />
-              <span>キーをクリックして塗る</span>
-            </label>
-            <input type="color" id="paint" aria-label="ペイント色" />
+          <h2>キーごとの設定</h2>
+          <label class="field">
+            <span>キーをクリックしたとき</span>
+            <select id="key-tool">
+              <option value="">何もしない</option>
+              <option value="paint">色を塗る</option>
+              <option value="alpha">アルファのグループにする</option>
+              <option value="mod">モディファイアのグループにする</option>
+              <option value="accent">アクセントのグループにする</option>
+            </select>
+          </label>
+          <div id="paint-row" class="paint-row" hidden>
+            <span>塗る色</span>
+            <input type="color" id="paint" aria-label="塗る色" />
           </div>
-          <p class="hint">同じ色のキーをもう一度クリックすると元に戻ります。キーボードでは、Tabでキーを選んでEnterまたはSpaceで塗れます。</p>
-          <button type="button" id="btn-clear">個別設定をすべて解除</button>
+          <p class="hint">
+            グループを付け替えたキー（例: 矢印キーをアクセントに）は、配色ルールやプリセットを変えてもそのグループの色に追従します。
+            塗った色は固定です。同じ操作をもう一度すると元に戻ります。キーボードでは、Tabでキーを選んでEnterまたはSpaceで操作できます。
+          </p>
+          <button type="button" id="btn-clear">このレイアウトの個別設定をすべて解除</button>
         </section>
 
         <section class="panel">
